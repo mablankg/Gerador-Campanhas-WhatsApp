@@ -1,5 +1,6 @@
 const accessCard = document.querySelector("#accessCard");
 const composer = document.querySelector("#composer");
+const groupsCard = document.querySelector("#groupsCard");
 const accessForm = document.querySelector("#accessForm");
 const sendForm = document.querySelector("#sendForm");
 const message = document.querySelector("#message");
@@ -7,12 +8,20 @@ const counter = document.querySelector("#counter");
 const result = document.querySelector("#result");
 const connection = document.querySelector("#connection");
 const sendButton = document.querySelector("#sendButton");
+const groupResult = document.querySelector("#groupResult");
+const groupSelect = document.querySelector("#groupSelect");
 let accessToken = sessionStorage.getItem("campaign_access") || "";
 
 function showResult(text, error = false) {
   result.textContent = text;
   result.classList.remove("hidden", "error");
   if (error) result.classList.add("error");
+}
+
+function showGroupResult(text, error = false) {
+  groupResult.textContent = text;
+  groupResult.classList.remove("hidden", "error");
+  if (error) groupResult.classList.add("error");
 }
 
 async function call(path, options = {}) {
@@ -43,6 +52,34 @@ async function unlock() {
   if (!accessToken || !(await status())) return;
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
+  groupsCard.classList.remove("hidden");
+  await loadGroups();
+}
+
+async function poll(id) {
+  for (let attempt = 0; attempt < 45; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const command = await call(`/api/command?id=${encodeURIComponent(id)}`);
+    if (command.status === "done") return command.result || {};
+    if (["failed", "unknown"].includes(command.status)) throw new Error(command.result?.error || command.status);
+  }
+  throw new Error("processing_timeout");
+}
+
+async function loadGroups() {
+  try {
+    const data = await call("/api/groups");
+    groupSelect.replaceChildren();
+    if (!data.groups?.length) {
+      groupSelect.add(new Option("Nenhum grupo encontrado", ""));
+      return;
+    }
+    groupSelect.add(new Option("Selecione um grupo", ""));
+    for (const group of data.groups) groupSelect.add(new Option(`${group.name} (${group.participant_count})`, group.id));
+  } catch (error) {
+    groupSelect.replaceChildren(new Option("Não foi possível carregar", ""));
+    showGroupResult(`Falha ao carregar grupos: ${error.message}`, true);
+  }
 }
 
 accessForm.addEventListener("submit", async (event) => {
@@ -52,6 +89,8 @@ accessForm.addEventListener("submit", async (event) => {
   if (!(await status())) return showResult("Senha de acesso inválida ou serviço indisponível.", true);
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
+  groupsCard.classList.remove("hidden");
+  await loadGroups();
 });
 
 message.addEventListener("input", () => { counter.textContent = `${new Blob([message.value]).size} / 8000`; });
@@ -67,19 +106,54 @@ sendForm.addEventListener("submit", async (event) => {
       body: JSON.stringify({ to: document.querySelector("#to").value.replace(/\D/g, ""), text: message.value }),
     });
     showResult("Mensagem recebida pela fila. Aguardando o WhatsApp...");
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const command = await call(`/api/command?id=${encodeURIComponent(queued.id)}`);
-      if (command.status === "done") { showResult(`Mensagem enviada. ID: ${command.result?.message_id || "confirmado"}`); sendForm.reset(); counter.textContent = "0 / 8000"; return; }
-      if (["failed", "unknown"].includes(command.status)) throw new Error(command.result?.error || command.status);
-    }
-    showResult("A mensagem continua na fila. Consulte novamente em alguns instantes.");
+    const completed = await poll(queued.id);
+    showResult(`Mensagem enviada. ID: ${completed.message_id || "confirmado"}`);
+    sendForm.reset();
+    counter.textContent = "0 / 8000";
   } catch (error) {
-    if (error.status === 401) { sessionStorage.removeItem("campaign_access"); accessToken = ""; accessCard.classList.remove("hidden"); composer.classList.add("hidden"); }
+    if (error.status === 401) { sessionStorage.removeItem("campaign_access"); accessToken = ""; accessCard.classList.remove("hidden"); composer.classList.add("hidden"); groupsCard.classList.add("hidden"); }
     showResult(`Não foi possível enviar: ${error.message}`, true);
   } finally {
     sendButton.disabled = false;
     sendButton.textContent = "Enviar mensagem";
+  }
+});
+
+document.querySelector("#refreshGroups").addEventListener("click", loadGroups);
+
+document.querySelector("#groupSendForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = document.querySelector("#groupSendButton");
+  button.disabled = true;
+  showGroupResult("Mensagem recebida pela fila. Aguardando o WhatsApp...");
+  try {
+    const queued = await call("/api/group-send", { method: "POST", body: JSON.stringify({ group_id: groupSelect.value, text: document.querySelector("#groupMessage").value }) });
+    const completed = await poll(queued.id);
+    showGroupResult(`Mensagem enviada ao grupo. ID: ${completed.message_id || "confirmado"}`);
+    document.querySelector("#groupMessage").value = "";
+  } catch (error) {
+    showGroupResult(`Não foi possível enviar ao grupo: ${error.message}`, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.querySelector("#createGroupForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = document.querySelector("#createGroupButton");
+  const participants = document.querySelector("#groupParticipants").value.split(/[\n,;]+/).map((item) => item.replace(/\D/g, "")).filter(Boolean);
+  button.disabled = true;
+  showGroupResult("Criando grupo no WhatsApp...");
+  try {
+    const queued = await call("/api/groups", { method: "POST", body: JSON.stringify({ name: document.querySelector("#groupName").value, participants }) });
+    const completed = await poll(queued.id);
+    showGroupResult(`Grupo criado: ${completed.name || "Grupo"}`);
+    event.target.reset();
+    await loadGroups();
+  } catch (error) {
+    showGroupResult(`Não foi possível criar o grupo: ${error.message}`, true);
+  } finally {
+    button.disabled = false;
   }
 });
 

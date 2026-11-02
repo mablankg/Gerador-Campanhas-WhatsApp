@@ -1,6 +1,6 @@
 # Gerador de Campanhas WhatsApp
 
-Consumidor web da API `mablankg/WhatsApp-API-GO-Vercel`. A primeira versão envia uma mensagem individual, consulta a conexão e acompanha o comando até a API aceitar o envio.
+Consumidor web da API `mablankg/WhatsApp-API-GO-Vercel`. Envia mensagens individuais e para grupos, lista os grupos da conta conectada e permite criar um grupo com participantes.
 
 ## Variáveis da Vercel
 
@@ -14,4 +14,4 @@ As três variáveis são somente do servidor. O navegador recebe apenas a senha 
 
 Importe `mablankg/Gerador-Campanhas-WhatsApp` na Vercel, use o preset **Other**, mantenha a raiz `./` e não configure comando de build nem diretório de saída. Use o nome de projeto `gerador-campanhas-whatsapp`.
 
-Esta primeira versão não realiza disparos em massa, agendamento ou reenvio automático. O resultado `done` confirma que o WhatsApp aceitou o envio; recibos de entrega e leitura ainda não são acompanhados.
+Esta versão não realiza disparos em massa, agendamento ou reenvio automático. O resultado `done` confirma que o WhatsApp aceitou o envio; recibos de entrega e leitura ainda não são acompanhados.

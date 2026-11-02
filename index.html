@@ -42,6 +42,36 @@
         </form>
         <div class="result hidden" id="result" role="status" aria-live="polite"></div>
       </section>
+
+      <section class="card groups-card hidden" id="groupsCard">
+        <div class="section-heading">
+          <div><p class="eyebrow">GRUPOS</p><h2>Conversas em grupo</h2></div>
+          <button class="secondary" id="refreshGroups" type="button">Atualizar lista</button>
+        </div>
+        <div class="group-grid">
+          <form id="groupSendForm">
+            <h3>Enviar para um grupo</h3>
+            <label>Grupo
+              <select id="groupSelect" required><option value="">Carregando grupos...</option></select>
+            </label>
+            <label>Mensagem
+              <textarea id="groupMessage" rows="5" maxlength="8000" required></textarea>
+            </label>
+            <button id="groupSendButton" type="submit">Enviar para o grupo</button>
+          </form>
+          <form id="createGroupForm">
+            <h3>Criar grupo</h3>
+            <label>Nome do grupo
+              <input id="groupName" maxlength="25" required />
+            </label>
+            <label>Participantes
+              <textarea id="groupParticipants" rows="5" placeholder="Um número por linha, com DDI e DDD" required></textarea>
+            </label>
+            <button id="createGroupButton" type="submit">Criar grupo</button>
+          </form>
+        </div>
+        <div class="result hidden" id="groupResult" role="status" aria-live="polite"></div>
+      </section>
     </main>
     <script src="/app.js" defer></script>
   </body>
