@@ -1,0 +1,12 @@
+{
+  "name": "gerador-campanhas-whatsapp",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "check": "node --check app.js && node --check lib/whatsapp.js && node --check api/status.js && node --check api/send.js && node --check api/command.js"
+  }
+}
+

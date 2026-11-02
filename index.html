@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Campanhas WhatsApp</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <div>
+          <p class="eyebrow">GERADOR DE CAMPANHAS</p>
+          <h1>Envio pelo WhatsApp</h1>
+          <p class="sub">Envie uma mensagem individual e acompanhe o processamento da API.</p>
+        </div>
+        <div class="connection" id="connection"><span></span><b>Verificando...</b></div>
+      </header>
+
+      <section class="card access-card" id="accessCard">
+        <h2>Acesso</h2>
+        <p>Digite a senha do painel configurada na Vercel.</p>
+        <form id="accessForm">
+          <label>Senha de acesso<input id="accessToken" type="password" autocomplete="current-password" required /></label>
+          <button type="submit">Entrar</button>
+        </form>
+      </section>
+
+      <section class="card hidden" id="composer">
+        <form id="sendForm">
+          <label>Número com DDI e DDD
+            <input id="to" inputmode="numeric" autocomplete="tel" placeholder="5511999999999" maxlength="15" required />
+          </label>
+          <label>Mensagem
+            <textarea id="message" rows="7" maxlength="8000" placeholder="Escreva a mensagem..." required></textarea>
+          </label>
+          <div class="form-footer">
+            <small id="counter">0 / 8000</small>
+            <button id="sendButton" type="submit">Enviar mensagem</button>
+          </div>
+        </form>
+        <div class="result hidden" id="result" role="status" aria-live="polite"></div>
+      </section>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
+
