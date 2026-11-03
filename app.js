@@ -82,6 +82,24 @@ async function loadGroups() {
   }
 }
 
+async function syncGroups() {
+  const button = document.querySelector("#refreshGroups");
+  button.disabled = true;
+  button.textContent = "Sincronizando...";
+  showGroupResult("Consultando os grupos diretamente no WhatsApp...");
+  try {
+    const queued = await call("/api/groups-sync", { method: "POST", body: "{}" });
+    const completed = await poll(queued.id);
+    await loadGroups();
+    showGroupResult(`Grupos atualizados: ${completed.group_count ?? groupSelect.options.length - 1}`);
+  } catch (error) {
+    showGroupResult(`Não foi possível atualizar os grupos: ${error.message}`, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Atualizar lista";
+  }
+}
+
 accessForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   accessToken = document.querySelector("#accessToken").value;
@@ -119,7 +137,7 @@ sendForm.addEventListener("submit", async (event) => {
   }
 });
 
-document.querySelector("#refreshGroups").addEventListener("click", loadGroups);
+document.querySelector("#refreshGroups").addEventListener("click", syncGroups);
 
 document.querySelector("#groupSendForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -158,4 +176,5 @@ document.querySelector("#createGroupForm").addEventListener("submit", async (eve
 });
 
 unlock();
+
 
