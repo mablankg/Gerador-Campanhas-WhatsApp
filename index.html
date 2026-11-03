@@ -22,7 +22,12 @@
         <h2>Acesso</h2>
         <p>Digite a senha do painel configurada na Vercel.</p>
         <form id="accessForm">
-          <label>Senha de acesso<input id="accessToken" type="password" autocomplete="current-password" required /></label>
+          <label>Senha de acesso
+            <span class="password-field">
+              <input id="accessToken" type="password" autocomplete="current-password" required />
+              <button class="password-toggle" id="togglePassword" type="button" aria-label="Mostrar senha" aria-pressed="false" title="Mostrar senha">👁</button>
+            </span>
+          </label>
           <button type="submit">Entrar</button>
         </form>
       </section>
@@ -76,4 +81,5 @@
     <script src="/app.js" defer></script>
   </body>
 </html>
+
 
