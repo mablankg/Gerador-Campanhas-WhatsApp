@@ -207,6 +207,24 @@ document.querySelector("#contactSearch").addEventListener("input", (event) => {
 
 document.querySelector("#newContact").addEventListener("click", () => openContact());
 
+document.querySelector("#syncContacts").addEventListener("click", async () => {
+  const button = document.querySelector("#syncContacts");
+  button.disabled = true;
+  button.textContent = "Sincronizando...";
+  showContactResult("Importando contatos armazenados na sessão do WhatsApp...");
+  try {
+    const queued = await call("/api/contacts-sync", { method: "POST", body: "{}" });
+    const completed = await poll(queued.id);
+    await loadContacts(document.querySelector("#contactSearch").value.trim());
+    showContactResult(`Contatos sincronizados: ${completed.contact_count ?? "concluído"}.`);
+  } catch (error) {
+    showContactResult(`Não foi possível sincronizar os contatos: ${error.message}`, true);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Sincronizar WhatsApp";
+  }
+});
+
 contactForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const save = document.querySelector("#saveContact");
