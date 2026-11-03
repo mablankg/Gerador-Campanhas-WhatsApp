@@ -10,7 +10,7 @@ const connection = document.querySelector("#connection");
 const sendButton = document.querySelector("#sendButton");
 const groupResult = document.querySelector("#groupResult");
 const groupSelect = document.querySelector("#groupSelect");
-let accessToken = sessionStorage.getItem("campaign_access") || "";
+let accessToken = localStorage.getItem("campaign_access") || "";
 
 function showResult(text, error = false) {
   result.textContent = text;
@@ -103,7 +103,7 @@ async function syncGroups() {
 accessForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   accessToken = document.querySelector("#accessToken").value;
-  sessionStorage.setItem("campaign_access", accessToken);
+  localStorage.setItem("campaign_access", accessToken);
   if (!(await status())) return showResult("Senha de acesso inválida ou serviço indisponível.", true);
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
@@ -129,7 +129,7 @@ sendForm.addEventListener("submit", async (event) => {
     sendForm.reset();
     counter.textContent = "0 / 8000";
   } catch (error) {
-    if (error.status === 401) { sessionStorage.removeItem("campaign_access"); accessToken = ""; accessCard.classList.remove("hidden"); composer.classList.add("hidden"); groupsCard.classList.add("hidden"); }
+    if (error.status === 401) { localStorage.removeItem("campaign_access"); accessToken = ""; accessCard.classList.remove("hidden"); composer.classList.add("hidden"); groupsCard.classList.add("hidden"); }
     showResult(`Não foi possível enviar: ${error.message}`, true);
   } finally {
     sendButton.disabled = false;
