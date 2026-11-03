@@ -10,7 +10,18 @@ const connection = document.querySelector("#connection");
 const sendButton = document.querySelector("#sendButton");
 const groupResult = document.querySelector("#groupResult");
 const groupSelect = document.querySelector("#groupSelect");
+const accessTokenInput = document.querySelector("#accessToken");
+const togglePassword = document.querySelector("#togglePassword");
 let accessToken = localStorage.getItem("campaign_access") || "";
+accessTokenInput.value = accessToken;
+
+togglePassword.addEventListener("click", () => {
+  const showing = accessTokenInput.type === "text";
+  accessTokenInput.type = showing ? "password" : "text";
+  togglePassword.setAttribute("aria-pressed", String(!showing));
+  togglePassword.setAttribute("aria-label", showing ? "Mostrar senha" : "Ocultar senha");
+  togglePassword.title = showing ? "Mostrar senha" : "Ocultar senha";
+});
 
 function showResult(text, error = false) {
   result.textContent = text;
@@ -102,7 +113,7 @@ async function syncGroups() {
 
 accessForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  accessToken = document.querySelector("#accessToken").value;
+  accessToken = accessTokenInput.value;
   localStorage.setItem("campaign_access", accessToken);
   if (!(await status())) return showResult("Senha de acesso inválida ou serviço indisponível.", true);
   accessCard.classList.add("hidden");
