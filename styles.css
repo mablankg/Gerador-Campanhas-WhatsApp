@@ -17,6 +17,10 @@ h2 { margin-top: 0; }
 label { display: grid; gap: 9px; font-weight: 700; margin-bottom: 22px; }
 input, textarea, select { width: 100%; border: 1px solid #cbd8d0; border-radius: 12px; padding: 14px 15px; font: inherit; color: inherit; background: #fbfdfb; transition: .2s; }
 input:focus, textarea:focus, select:focus { outline: none; border-color: #16834b; box-shadow: 0 0 0 4px #16834b18; background: #fff; }
+.password-field { position: relative; display: block; }
+.password-field input { padding-right: 54px; }
+.password-toggle { position: absolute; top: 50%; right: 7px; transform: translateY(-50%); width: 42px; height: 42px; padding: 0; background: transparent; color: #526159; font-size: 20px; line-height: 1; }
+.password-toggle:hover, .password-toggle:focus-visible { background: #e9f3ec; color: #155c39; }
 textarea { resize: vertical; min-height: 150px; }
 button { border: 0; border-radius: 12px; padding: 13px 20px; font: inherit; font-weight: 800; background: #166c42; color: #fff; cursor: pointer; }
 button:hover { background: #0f5734; }
@@ -34,4 +38,5 @@ h3 { margin: 0 0 22px; font-size: 19px; }
 .result.error { background: #fff0f0; color: #9a3131; }
 .hidden { display: none; }
 @media (max-width: 680px) { .shell { padding: 36px 0; } header { display: grid; } .connection { justify-self: start; } .form-footer, .section-heading { align-items: stretch; flex-direction: column; } .group-grid { grid-template-columns: 1fr; } .group-grid form + form { border-left: 0; border-top: 1px solid #e1e9e4; padding-left: 0; padding-top: 30px; } }
+
 
