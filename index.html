@@ -48,6 +48,41 @@
         <div class="result hidden" id="result" role="status" aria-live="polite"></div>
       </section>
 
+      <section class="card contacts-card hidden" id="contactsCard">
+        <div class="section-heading">
+          <div><p class="eyebrow">CRM</p><h2>Contatos</h2></div>
+          <button class="secondary" id="newContact" type="button">Novo contato</button>
+        </div>
+        <div class="contacts-layout">
+          <aside class="contacts-sidebar">
+            <input id="contactSearch" type="search" placeholder="Buscar por nome, telefone ou e-mail" />
+            <div class="contact-list" id="contactList"><p class="muted">Carregando contatos...</p></div>
+          </aside>
+          <form class="contact-form hidden" id="contactForm">
+            <input id="contactId" type="hidden" />
+            <div class="contact-form-heading"><h3 id="contactFormTitle">Contato</h3><span id="contactPhoneLabel"></span></div>
+            <div class="contact-fields">
+              <label>Nome<input id="contactName" maxlength="160" /></label>
+              <label>Telefone<input id="contactPhone" inputmode="numeric" maxlength="15" /></label>
+              <label>E-mail<input id="contactEmail" type="email" maxlength="254" /></label>
+              <label>CPF/CNPJ<input id="contactTaxId" maxlength="32" /></label>
+              <label>Tipo<select id="contactType"><option value="lead">Lead</option><option value="client">Cliente</option><option value="partner">Parceiro</option><option value="other">Outro</option></select></label>
+              <label>Status<select id="contactStatus"><option value="active">Ativo</option><option value="waiting">Aguardando</option><option value="finished">Finalizado</option></select></label>
+              <label>Responsável<input id="contactResponsible" maxlength="160" /></label>
+              <label>Etiquetas<input id="contactTags" placeholder="cliente, urgente, retorno" /></label>
+            </div>
+            <label>Observações internas<textarea id="contactNotes" rows="4" maxlength="20000"></textarea></label>
+            <label>Informações complementares
+              <textarea id="contactExtra" rows="5" placeholder="Empresa: Exemplo Ltda.&#10;Origem: Indicação&#10;Cidade: São Paulo"></textarea>
+              <small>Use uma informação por linha no formato Campo: valor.</small>
+            </label>
+            <div class="contact-actions"><button class="secondary" id="archiveContact" type="button">Arquivar</button><button id="saveContact" type="submit">Salvar contato</button></div>
+          </form>
+          <div class="contact-empty" id="contactEmpty"><p>Selecione um contato ou crie um novo cadastro.</p></div>
+        </div>
+        <div class="result hidden" id="contactResult" role="status" aria-live="polite"></div>
+      </section>
+
       <section class="card groups-card hidden" id="groupsCard">
         <div class="section-heading">
           <div><p class="eyebrow">GRUPOS</p><h2>Conversas em grupo</h2></div>

@@ -31,12 +31,23 @@ button:disabled { opacity: .55; cursor: wait; }
 .section-heading h2 { margin-bottom: 0; }
 .group-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
 .group-grid form + form { border-left: 1px solid #e1e9e4; padding-left: 36px; }
+.contacts-layout { display: grid; grid-template-columns: minmax(230px, .75fr) minmax(0, 1.6fr); gap: 30px; min-height: 420px; }
+.contacts-sidebar { border-right: 1px solid #e1e9e4; padding-right: 24px; }
+.contact-list { margin-top: 14px; display: grid; gap: 8px; max-height: 610px; overflow: auto; }
+.contact-item { width: 100%; text-align: left; padding: 13px; background: #f5f8f6; color: #20352b; border: 1px solid transparent; }
+.contact-item:hover, .contact-item.active { background: #e7f3eb; border-color: #b7d7c3; }
+.contact-item strong, .contact-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contact-item small, .muted, .contact-form-heading span, label small { color: #718078; font-weight: 500; }
+.contact-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+.contact-form-heading { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; }
+.contact-actions { display: flex; justify-content: space-between; gap: 16px; }
+.contact-empty { display: grid; place-items: center; text-align: center; color: #718078; }
 h3 { margin: 0 0 22px; font-size: 19px; }
 .form-footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .form-footer small { color: #75837b; }
 .result { margin-top: 24px; border-radius: 14px; padding: 16px; background: #eef7f1; color: #155c39; line-height: 1.5; }
 .result.error { background: #fff0f0; color: #9a3131; }
 .hidden { display: none; }
-@media (max-width: 680px) { .shell { padding: 36px 0; } header { display: grid; } .connection { justify-self: start; } .form-footer, .section-heading { align-items: stretch; flex-direction: column; } .group-grid { grid-template-columns: 1fr; } .group-grid form + form { border-left: 0; border-top: 1px solid #e1e9e4; padding-left: 0; padding-top: 30px; } }
+@media (max-width: 680px) { .shell { padding: 36px 0; } header { display: grid; } .connection { justify-self: start; } .form-footer, .section-heading { align-items: stretch; flex-direction: column; } .group-grid, .contacts-layout, .contact-fields { grid-template-columns: 1fr; } .group-grid form + form { border-left: 0; border-top: 1px solid #e1e9e4; padding-left: 0; padding-top: 30px; } .contacts-sidebar { border-right: 0; border-bottom: 1px solid #e1e9e4; padding: 0 0 22px; } }
 
 
