@@ -362,6 +362,7 @@ function renderKanban() {
     const cards = document.createElement("div"); cards.className = "kanban-card-list";
     for (const contact of contacts) {
       const card = document.createElement("article"); card.className = `kanban-card priority-${contact.priority || "normal"}${unreadContacts.has(String(contact.id)) ? " incoming" : ""}`; card.draggable = true; card.dataset.id = contact.id;
+      card.style.setProperty("--stage-color", color);
       const priority = document.createElement("span"); priority.className = "kanban-priority"; priority.textContent = priorityLabels[contact.priority || "normal"];
       const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
       const phone = document.createElement("small"); phone.textContent = formatPhone(contact.phone);
@@ -511,11 +512,13 @@ function renderContacts() {
 	if (!contacts.length) { contactList.innerHTML = '<p class="muted">Nenhum contato encontrado.</p>'; return; }
 	for (const contact of contacts) {
 		const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${String(activeContact?.id||"")===String(contact.id)?" active":""}${unreadContacts.has(String(contact.id))?" incoming":""}`; button.dataset.id = contact.id;
+		const stage = attendanceStages.find(([key]) => key === (contact.attendance_stage || "new"));
+		button.style.setProperty("--stage-color", stage?.[2] || "#3f9cd0");
 		if (String(activeContact?.id || "") === String(contact.id)) button.setAttribute("aria-current", "true");
 		const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
 		const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${formatPhone(contact.phone)} · ${contact.contact_type || "lead"} · ${contact.status || "active"}`;
 		button.append(name, detail);
-		const workflow = document.createElement("small"); workflow.className = `contact-workflow priority-${contact.priority || "normal"}`; workflow.textContent = `${attendanceStages.find(([key]) => key === (contact.attendance_stage || "new"))?.[1] || "Novo"} · ${priorityLabels[contact.priority || "normal"]}`; button.append(workflow);
+		const workflow = document.createElement("small"); workflow.className = `contact-workflow priority-${contact.priority || "normal"}`; workflow.style.borderLeftColor = stage?.[2] || "#3f9cd0"; workflow.textContent = `${stage?.[1] || "Novo"} · ${priorityLabels[contact.priority || "normal"]}`; button.append(workflow);
 		const extraEntries = Object.entries(contact.extra || {}).slice(0, 2);
 		if (extraEntries.length) { const extra = document.createElement("small"); extra.className = "contact-extra-preview"; extra.textContent = extraEntries.map(([key, value]) => `${key}: ${value}`).join(" · "); button.append(extra); }
 		button.addEventListener("click", () => openContact(contact)); contactList.append(button);
