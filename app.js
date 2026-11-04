@@ -387,12 +387,14 @@ function renderKanban() {
 }
 
 function showConversationView() {
-  kanbanBoard.classList.add("hidden"); contactsCard.classList.remove("hidden");
+  kanbanBoard.classList.add("hidden"); kanbanBoard.style.display = "none"; kanbanBoard.setAttribute("aria-hidden", "true");
+  contactsCard.classList.remove("hidden"); contactsCard.style.display = "grid"; contactsCard.setAttribute("aria-hidden", "false");
   document.querySelector("#conversationViewButton").classList.add("active"); document.querySelector("#boardViewButton").classList.remove("active");
 }
 
 function showBoardView() {
-  contactsCard.classList.add("hidden"); kanbanBoard.classList.remove("hidden"); renderKanban();
+  contactsCard.classList.add("hidden"); contactsCard.style.display = "none"; contactsCard.setAttribute("aria-hidden", "true");
+  kanbanBoard.classList.remove("hidden"); kanbanBoard.style.display = "flex"; kanbanBoard.setAttribute("aria-hidden", "false"); renderKanban();
   document.querySelector("#boardViewButton").classList.add("active"); document.querySelector("#conversationViewButton").classList.remove("active");
 }
 
