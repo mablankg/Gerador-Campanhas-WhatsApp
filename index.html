@@ -14,7 +14,7 @@
           <h1>Blank Juridico</h1>
           <p class="sub">Atendimento, contatos e conversas jurídicas pelo WhatsApp.</p>
         </div>
-        <div class="connection" id="connection"><span></span><b>Verificando...</b></div>
+        <div class="header-actions"><div class="view-switch hidden" id="viewSwitch"><button class="active" id="conversationViewButton" type="button">Conversas</button><button id="boardViewButton" type="button">Quadro</button></div><div class="connection" id="connection"><span></span><b>Verificando...</b></div></div>
       </header>
 
       <section class="card access-card" id="accessCard">
@@ -76,6 +76,7 @@
               <label>E-mail<input id="contactEmail" type="email" maxlength="254" /></label>
               <label>CPF/CNPJ<input id="contactTaxId" maxlength="32" /></label>
               <div class="contact-fields"><label>Tipo<select id="contactType"><option value="lead">Lead</option><option value="client">Cliente</option><option value="partner">Parceiro</option><option value="other">Outro</option></select></label><label>Status<select id="contactStatus"><option value="active">Ativo</option><option value="waiting">Aguardando</option><option value="finished">Finalizado</option></select></label></div>
+              <div class="contact-fields"><label>Etapa<select id="contactStage"><option value="new">Novo</option><option value="in_progress">Em atendimento</option><option value="waiting_client">Aguardando cliente</option><option value="waiting_action">Aguardando providência</option><option value="finished">Finalizado</option></select></label><label>Importância<select id="contactPriority"><option value="low">Baixa</option><option value="normal">Normal</option><option value="high">Alta</option><option value="urgent">Urgente</option></select></label></div>
               <label>Responsável<input id="contactResponsible" maxlength="160" /></label>
               <label>Etiquetas<input id="contactTags" placeholder="cliente, urgente, retorno" /></label>
               <label>Observações internas<textarea id="contactNotes" rows="4" maxlength="20000"></textarea></label>
@@ -92,6 +93,11 @@
           </div>
           <div class="result hidden" id="contactResult" role="status" aria-live="polite"></div>
         </aside>
+      </section>
+
+      <section class="kanban-workspace hidden" id="kanbanBoard">
+        <div class="kanban-toolbar"><div><p class="eyebrow">CRM</p><h2>Etapas de atendimento</h2></div><div class="priority-legend"><span class="priority-urgent">Urgente</span><span class="priority-high">Alta</span><span class="priority-normal">Normal</span><span class="priority-low">Baixa</span></div></div>
+        <div class="kanban-columns" id="kanbanColumns"></div>
       </section>
 
       <section class="card groups-card hidden" id="groupsCard">

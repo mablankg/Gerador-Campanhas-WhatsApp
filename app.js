@@ -17,6 +17,8 @@ const contactList = document.querySelector("#contactList");
 const contactForm = document.querySelector("#contactForm");
 const contactEmpty = document.querySelector("#contactEmpty");
 const contactResult = document.querySelector("#contactResult");
+const kanbanBoard = document.querySelector("#kanbanBoard");
+const viewSwitch = document.querySelector("#viewSwitch");
 let accessToken = localStorage.getItem("campaign_access") || "";
 let allContacts = [];
 let activeContact = null;
@@ -148,6 +150,7 @@ async function unlock() {
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
+  viewSwitch.classList.remove("hidden");
   await Promise.all([loadGroups(), loadContacts()]);
 	await pollMessageEvents();
 	startLiveRefresh();
@@ -167,7 +170,7 @@ async function pollMessageEvents() {
     }
     changed = true;
   }
-  if (changed) { renderContacts(); renderGroups(); }
+  if (changed) { renderContacts(); renderGroups(); if (!kanbanBoard.classList.contains("hidden")) renderKanban(); }
 }
 
 function startLiveRefresh() {
@@ -338,6 +341,61 @@ function contactDisplayName(contact) {
   return contact?.nickname ? `${name} (${contact.nickname})` : name;
 }
 
+const attendanceStages = [
+  ["new", "Novos"], ["in_progress", "Em atendimento"], ["waiting_client", "Aguardando cliente"],
+  ["waiting_action", "Aguardando providência"], ["finished", "Finalizados"],
+];
+const priorityLabels = { urgent: "Urgente", high: "Alta", normal: "Normal", low: "Baixa" };
+const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
+
+function renderKanban() {
+  const container = document.querySelector("#kanbanColumns");
+  container.replaceChildren();
+  for (const [stage, label] of attendanceStages) {
+    const column = document.createElement("section"); column.className = "kanban-column"; column.dataset.stage = stage;
+    const contacts = allContacts.filter((item) => (item.attendance_stage || "new") === stage)
+      .sort((a, b) => (priorityOrder[a.priority || "normal"] - priorityOrder[b.priority || "normal"]) || contactDisplayName(a).localeCompare(contactDisplayName(b), "pt-BR"));
+    const heading = document.createElement("div"); heading.className = "kanban-column-heading";
+    const title = document.createElement("strong"); title.textContent = label;
+    const count = document.createElement("span"); count.textContent = contacts.length; heading.append(title, count); column.append(heading);
+    const cards = document.createElement("div"); cards.className = "kanban-card-list";
+    for (const contact of contacts) {
+      const card = document.createElement("article"); card.className = `kanban-card priority-${contact.priority || "normal"}${unreadContacts.has(String(contact.id)) ? " incoming" : ""}`; card.draggable = true; card.dataset.id = contact.id;
+      const priority = document.createElement("span"); priority.className = "kanban-priority"; priority.textContent = priorityLabels[contact.priority || "normal"];
+      const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
+      const phone = document.createElement("small"); phone.textContent = formatPhone(contact.phone);
+      const meta = document.createElement("div"); meta.className = "kanban-meta"; meta.textContent = contact.responsible || contact.contact_type || "Lead";
+      card.append(priority, name, phone, meta);
+      card.addEventListener("dragstart", (event) => { event.dataTransfer.setData("text/contact-id", String(contact.id)); card.classList.add("dragging"); });
+      card.addEventListener("dragend", () => card.classList.remove("dragging"));
+      card.addEventListener("click", () => { openContact(contact); showConversationView(); });
+      cards.append(card);
+    }
+    column.append(cards);
+    column.addEventListener("dragover", (event) => { event.preventDefault(); column.classList.add("drag-over"); });
+    column.addEventListener("dragleave", () => column.classList.remove("drag-over"));
+    column.addEventListener("drop", async (event) => {
+      event.preventDefault(); column.classList.remove("drag-over"); const id = event.dataTransfer.getData("text/contact-id");
+      const contact = allContacts.find((item) => String(item.id) === id); if (!contact || contact.attendance_stage === stage) return;
+      const previousStage = contact.attendance_stage || "new"; contact.attendance_stage = stage; renderKanban();
+      try { const updated = await call(`/api/contacts?id=${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ attendance_stage: stage }) }); Object.assign(contact, updated); }
+      catch (error) { contact.attendance_stage = previousStage; showContactResult(`Não foi possível mover o contato: ${error.message}`, true); }
+      renderKanban(); renderContacts();
+    });
+    container.append(column);
+  }
+}
+
+function showConversationView() {
+  kanbanBoard.classList.add("hidden"); contactsCard.classList.remove("hidden");
+  document.querySelector("#conversationViewButton").classList.add("active"); document.querySelector("#boardViewButton").classList.remove("active");
+}
+
+function showBoardView() {
+  contactsCard.classList.add("hidden"); kanbanBoard.classList.remove("hidden"); renderKanban();
+  document.querySelector("#boardViewButton").classList.add("active"); document.querySelector("#conversationViewButton").classList.remove("active");
+}
+
 function renderExtraFields(extra = {}) {
   const container = document.querySelector("#contactExtraFields");
   container.replaceChildren();
@@ -393,6 +451,8 @@ function openContact(contact = null) {
   document.querySelector("#contactTaxId").value = contact?.tax_id || "";
   document.querySelector("#contactType").value = contact?.contact_type || "lead";
   document.querySelector("#contactStatus").value = contact?.status || "active";
+	document.querySelector("#contactStage").value = contact?.attendance_stage || "new";
+	document.querySelector("#contactPriority").value = contact?.priority || "normal";
   document.querySelector("#contactResponsible").value = contact?.responsible || "";
   document.querySelector("#contactTags").value = (contact?.tags || []).join(", ");
   document.querySelector("#contactNotes").value = contact?.notes || "";
@@ -429,6 +489,7 @@ function renderContacts() {
 		const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
 		const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${formatPhone(contact.phone)} · ${contact.contact_type || "lead"} · ${contact.status || "active"}`;
 		button.append(name, detail);
+		const workflow = document.createElement("small"); workflow.className = `contact-workflow priority-${contact.priority || "normal"}`; workflow.textContent = `${attendanceStages.find(([key]) => key === (contact.attendance_stage || "new"))?.[1] || "Novo"} · ${priorityLabels[contact.priority || "normal"]}`; button.append(workflow);
 		const extraEntries = Object.entries(contact.extra || {}).slice(0, 2);
 		if (extraEntries.length) { const extra = document.createElement("small"); extra.className = "contact-extra-preview"; extra.textContent = extraEntries.map(([key, value]) => `${key}: ${value}`).join(" · "); button.append(extra); }
 		button.addEventListener("click", () => openContact(contact)); contactList.append(button);
@@ -441,6 +502,7 @@ async function loadContacts(query = "", silent = false) {
 		allContacts = data.contacts || [];
 		if (activeContact) activeContact = allContacts.find((item) => String(item.id) === String(activeContact.id)) || activeContact;
 		renderContacts();
+		if (!kanbanBoard.classList.contains("hidden")) renderKanban();
   } catch (error) {
 		if (silent) return;
     contactList.innerHTML = '<p class="muted">Não foi possível carregar os contatos.</p>';
@@ -483,6 +545,8 @@ document.querySelector("#toggleContactRail").addEventListener("click", () => { d
 document.querySelector("#showContactRail").addEventListener("click", () => { document.querySelector("#contactRail").classList.remove("collapsed"); contactsCard.classList.remove("left-collapsed"); });
 document.querySelector("#toggleDetailRail").addEventListener("click", () => { document.querySelector("#detailRail").classList.add("collapsed"); contactsCard.classList.add("right-collapsed"); });
 document.querySelector("#showDetailRail").addEventListener("click", () => { document.querySelector("#detailRail").classList.remove("collapsed"); contactsCard.classList.remove("right-collapsed"); });
+document.querySelector("#conversationViewButton").addEventListener("click", showConversationView);
+document.querySelector("#boardViewButton").addEventListener("click", showBoardView);
 
 function enablePanelResize(handle, side) {
   handle.addEventListener("pointerdown", (event) => {
@@ -571,6 +635,8 @@ contactForm.addEventListener("submit", async (event) => {
       tax_id: document.querySelector("#contactTaxId").value.trim(),
       contact_type: document.querySelector("#contactType").value,
       status: document.querySelector("#contactStatus").value,
+      attendance_stage: document.querySelector("#contactStage").value,
+      priority: document.querySelector("#contactPriority").value,
       responsible: document.querySelector("#contactResponsible").value.trim(),
       tags: document.querySelector("#contactTags").value.split(",").map((tag) => tag.trim()).filter(Boolean),
       notes: document.querySelector("#contactNotes").value,
