@@ -182,4 +182,14 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 @media (max-width: 1050px) { .service-workspace { grid-template-columns: min(300px, 38vw) minmax(380px, 1fr); } .panel-resizer { display: none; } }
 @media (max-width: 720px) { .service-workspace { grid-template-columns: 1fr; } }
 
+/* Links, anexos e novas mensagens */
+.message-text a { color: #0866c4; text-decoration: underline; overflow-wrap: anywhere; }
+.message-bubble.mine .message-text a { color: #d9f2ff; }
+.message-media { cursor: zoom-in; }
+.media-open { display: inline-block; margin-top: 5px; color: #155c39; font-size: 10px; font-weight: 700; }
+.message-bubble.mine .media-open { color: #fff; }
+.contact-item.incoming:not(.active) { background: linear-gradient(90deg, #fff0a8, #fff9d7); border-color: #dda900; box-shadow: inset 5px 0 #e0a400, 0 3px 14px #a8790033; animation: incoming-pulse 1.4s ease-in-out infinite alternate; }
+.contact-item.incoming:not(.active)::after { content: "NOVA"; position: absolute; top: 7px; right: 7px; padding: 2px 5px; border-radius: 999px; background: #d89400; color: #fff; font-size: 8px; font-weight: 900; letter-spacing: .05em; }
+@keyframes incoming-pulse { from { box-shadow: inset 5px 0 #e0a400, 0 2px 8px #a8790022; } to { box-shadow: inset 5px 0 #e0a400, 0 4px 18px #a8790060; } }
+
 

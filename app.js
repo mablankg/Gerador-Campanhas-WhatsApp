@@ -28,6 +28,9 @@ let liveRefreshCycle = 0;
 let mediaObjectURLs = [];
 let renderedConversationKey = "";
 let renderedConversationSignature = "";
+let messageEventCursor = "latest";
+const unreadContacts = new Set();
+const unreadGroups = new Set();
 const savedLeftPanelWidth = Number(localStorage.getItem("blank_left_panel_width"));
 const savedRightPanelWidth = Number(localStorage.getItem("blank_right_panel_width"));
 if (savedLeftPanelWidth >= 230 && savedLeftPanelWidth <= 520) contactsCard.style.setProperty("--left-rail-width", `${savedLeftPanelWidth}px`);
@@ -90,21 +93,36 @@ async function appendMessageMedia(bubble, media) {
   const url = URL.createObjectURL(await response.blob()); mediaObjectURLs.push(url);
   let element;
   if (media.type === "image" || media.type === "sticker") {
+    const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.rel = "noopener"; link.title = "Abrir imagem";
     element = document.createElement("img"); element.src = url; element.alt = media.caption || (media.type === "sticker" ? "Figurinha" : "Imagem"); element.className = `message-media ${media.type}`;
+    link.append(element); bubble.append(link); return;
   } else if (media.type === "audio") {
     element = document.createElement("audio"); element.src = url; element.controls = true; element.preload = "metadata"; element.className = "message-media";
   } else if (media.type === "video") {
     element = document.createElement("video"); element.src = url; element.controls = true; element.preload = "metadata"; element.className = "message-media";
   } else {
-    element = document.createElement("a"); element.href = url; element.download = media.file_name || "documento"; element.textContent = `📄 ${media.file_name || "Baixar documento"}`; element.className = "message-document";
+    element = document.createElement("a"); element.href = url; element.target = "_blank"; element.rel = "noopener"; element.textContent = `📄 ${media.file_name || "Abrir documento"}`; element.className = "message-document";
   }
   bubble.append(element);
+  if (media.type === "audio" || media.type === "video") {
+    const open = document.createElement("a"); open.href = url; open.target = "_blank"; open.rel = "noopener"; open.className = "media-open"; open.textContent = "Abrir em nova janela"; bubble.append(open);
+  }
+}
+
+function appendTextWithLinks(container, text) {
+  const body = document.createElement("span"); body.className = "message-text";
+  for (const part of text.split(/(https?:\/\/[^\s]+)/g)) {
+    if (/^https?:\/\//.test(part)) {
+      const link = document.createElement("a"); link.href = part; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = part; body.append(link);
+    } else if (part) body.append(document.createTextNode(part));
+  }
+  container.append(body);
 }
 
 async function renderMessageBubble(thread, item) {
   const bubble = document.createElement("div"); bubble.className = `message-bubble${item.from_me ? " mine" : ""}`;
   const text = item.text || item.media?.caption;
-  if (text) { const body = document.createElement("span"); body.textContent = text; bubble.append(body); }
+  if (text) appendTextWithLinks(bubble, text);
   await appendMessageMedia(bubble, item.media);
   if (!text && !item.media) { const body = document.createElement("span"); body.textContent = "Mensagem sem texto"; bubble.append(body); }
   const time = document.createElement("time"); time.textContent = new Date(item.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -131,7 +149,25 @@ async function unlock() {
   composer.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
   await Promise.all([loadGroups(), loadContacts()]);
+	await pollMessageEvents();
 	startLiveRefresh();
+}
+
+async function pollMessageEvents() {
+  const data = await call(`/api/message-events?after=${encodeURIComponent(messageEventCursor)}`);
+  messageEventCursor = String(data.next_after ?? messageEventCursor);
+  let changed = false;
+  for (const item of data.messages || []) {
+    if (item.from_me) continue;
+    if (String(item.chat).endsWith("@g.us")) {
+      if (activeGroup?.id !== item.chat) unreadGroups.add(item.chat);
+    } else if (item.contact_phone) {
+      const contact = allContacts.find((entry) => entry.phone === item.contact_phone);
+      if (contact && String(activeContact?.id || "") !== String(contact.id)) unreadContacts.add(String(contact.id));
+    }
+    changed = true;
+  }
+  if (changed) { renderContacts(); renderGroups(); }
 }
 
 function startLiveRefresh() {
@@ -141,6 +177,7 @@ function startLiveRefresh() {
     liveRefreshBusy = true;
     liveRefreshCycle += 1;
     try {
+      await pollMessageEvents();
       if (activeContact) await loadContactMessages(activeContact, true);
       else if (activeGroup) await loadGroupMessages(activeGroup, true);
       if (liveRefreshCycle % 3 === 0) await loadContacts(document.querySelector("#contactSearch").value.trim(), true);
@@ -148,7 +185,7 @@ function startLiveRefresh() {
     } finally {
       liveRefreshBusy = false;
     }
-  }, 5000);
+  }, 3000);
 }
 
 async function poll(id) {
@@ -189,7 +226,7 @@ function renderGroups() {
   list.replaceChildren();
   if (!groups.length) { list.innerHTML = '<p class="muted">Nenhum grupo encontrado.</p>'; return; }
   for (const group of groups) {
-    const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${activeGroup?.id===group.id?" active":""}`; button.dataset.id = group.id;
+    const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${activeGroup?.id===group.id?" active":""}${unreadGroups.has(group.id)?" incoming":""}`; button.dataset.id = group.id;
     if (activeGroup?.id === group.id) button.setAttribute("aria-current", "true");
     const name = document.createElement("strong"); name.textContent = group.name;
     const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${group.participant_count} participantes${group.is_announce ? " · somente administradores" : ""}`;
@@ -210,6 +247,7 @@ async function loadGroupMessages(group, silent = false) {
 }
 
 function openGroup(group) {
+  unreadGroups.delete(group.id);
   activeGroup=group; activeContact=null; contactForm.classList.add("hidden"); contactEmpty.classList.add("hidden");
   document.querySelector("#conversationName").textContent=group.name; document.querySelector("#conversationPhone").textContent=`${group.participant_count} participantes`;
   document.querySelector("#detailContactName").textContent=group.name; document.querySelector("#entityDetailsTab").textContent="Grupo"; document.querySelector("#entityDetailsTab").dataset.tab="group";
@@ -220,7 +258,7 @@ function openGroup(group) {
   document.querySelector("#to").value=group.id; message.disabled=false; sendButton.disabled=false;
   document.querySelectorAll(".detail-tabs button").forEach((item,index)=>item.classList.toggle("active",index===0));
   document.querySelectorAll("[data-panel]").forEach((panel)=>panel.classList.toggle("hidden",panel.dataset.panel!=="group"));
-  document.querySelectorAll("#groupList .contact-item").forEach((item)=>{ const selected=item.dataset.id===group.id; item.classList.toggle("active",selected); item.toggleAttribute("aria-current",selected); });
+  document.querySelectorAll("#groupList .contact-item").forEach((item)=>{ const selected=item.dataset.id===group.id; item.classList.toggle("active",selected); item.toggleAttribute("aria-current",selected); if(selected)item.classList.remove("incoming"); });
   loadGroupMessages(group); loadComments();
 }
 
@@ -339,6 +377,7 @@ async function loadContactMessages(contact, silent = false) {
 }
 
 function openContact(contact = null) {
+  if (contact) unreadContacts.delete(String(contact.id));
   activeContact = contact;
 	activeGroup = null;
   contactEmpty.classList.add("hidden");
@@ -360,7 +399,7 @@ function openContact(contact = null) {
 	document.querySelector("#contactExtra").value = extraToText(contact?.extra);
 	renderExtraFields(contact?.extra);
   document.querySelector("#archiveContact").classList.toggle("hidden", !contact);
-	document.querySelectorAll("#contactList .contact-item").forEach((item) => { const selected=item.dataset.id === String(contact?.id || ""); item.classList.toggle("active", selected); item.toggleAttribute("aria-current", selected); });
+	document.querySelectorAll("#contactList .contact-item").forEach((item) => { const selected=item.dataset.id === String(contact?.id || ""); item.classList.toggle("active", selected); item.toggleAttribute("aria-current", selected); if(selected)item.classList.remove("incoming"); });
 	document.querySelector("#conversationName").textContent = contact ? contactDisplayName(contact) : "Novo contato";
 	document.querySelector("#conversationPhone").textContent = contact ? formatPhone(contact.phone) : "Preencha a ficha ao lado";
 	document.querySelector("#detailContactName").textContent = contact ? contactDisplayName(contact) : "Novo contato";
@@ -385,7 +424,7 @@ function renderContacts() {
 	contactList.replaceChildren();
 	if (!contacts.length) { contactList.innerHTML = '<p class="muted">Nenhum contato encontrado.</p>'; return; }
 	for (const contact of contacts) {
-		const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${String(activeContact?.id||"")===String(contact.id)?" active":""}`; button.dataset.id = contact.id;
+		const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${String(activeContact?.id||"")===String(contact.id)?" active":""}${unreadContacts.has(String(contact.id))?" incoming":""}`; button.dataset.id = contact.id;
 		if (String(activeContact?.id || "") === String(contact.id)) button.setAttribute("aria-current", "true");
 		const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
 		const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${formatPhone(contact.phone)} · ${contact.contact_type || "lead"} · ${contact.status || "active"}`;
