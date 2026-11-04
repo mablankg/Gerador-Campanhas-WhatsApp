@@ -28,6 +28,10 @@ let liveRefreshCycle = 0;
 let mediaObjectURLs = [];
 let renderedConversationKey = "";
 let renderedConversationSignature = "";
+const savedLeftPanelWidth = Number(localStorage.getItem("blank_left_panel_width"));
+const savedRightPanelWidth = Number(localStorage.getItem("blank_right_panel_width"));
+if (savedLeftPanelWidth >= 230 && savedLeftPanelWidth <= 520) contactsCard.style.setProperty("--left-rail-width", `${savedLeftPanelWidth}px`);
+if (savedRightPanelWidth >= 280 && savedRightPanelWidth <= 600) contactsCard.style.setProperty("--right-rail-width", `${savedRightPanelWidth}px`);
 accessTokenInput.value = accessToken;
 
 togglePassword.addEventListener("click", () => {
@@ -440,6 +444,36 @@ document.querySelector("#toggleContactRail").addEventListener("click", () => { d
 document.querySelector("#showContactRail").addEventListener("click", () => { document.querySelector("#contactRail").classList.remove("collapsed"); contactsCard.classList.remove("left-collapsed"); });
 document.querySelector("#toggleDetailRail").addEventListener("click", () => { document.querySelector("#detailRail").classList.add("collapsed"); contactsCard.classList.add("right-collapsed"); });
 document.querySelector("#showDetailRail").addEventListener("click", () => { document.querySelector("#detailRail").classList.remove("collapsed"); contactsCard.classList.remove("right-collapsed"); });
+
+function enablePanelResize(handle, side) {
+  handle.addEventListener("pointerdown", (event) => {
+    if (window.innerWidth <= 1050) return;
+    event.preventDefault();
+    handle.setPointerCapture(event.pointerId);
+    handle.classList.add("dragging"); document.body.classList.add("resizing-panels");
+    const startX = event.clientX;
+    const property = side === "left" ? "--left-rail-width" : "--right-rail-width";
+    const rail = document.querySelector(side === "left" ? "#contactRail" : "#detailRail");
+    const startWidth = rail.getBoundingClientRect().width;
+    const minimum = side === "left" ? 230 : 280;
+    const maximum = side === "left" ? 520 : 600;
+    const move = (moveEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const width = Math.round(Math.min(maximum, Math.max(minimum, startWidth + (side === "left" ? delta : -delta))));
+      contactsCard.style.setProperty(property, `${width}px`);
+    };
+    const finish = () => {
+      handle.classList.remove("dragging"); document.body.classList.remove("resizing-panels");
+      handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", finish); handle.removeEventListener("pointercancel", finish);
+      const width = Math.round(rail.getBoundingClientRect().width);
+      localStorage.setItem(side === "left" ? "blank_left_panel_width" : "blank_right_panel_width", String(width));
+    };
+    handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", finish); handle.addEventListener("pointercancel", finish);
+  });
+}
+
+enablePanelResize(document.querySelector("#leftPanelResizer"), "left");
+enablePanelResize(document.querySelector("#rightPanelResizer"), "right");
 
 document.querySelectorAll(".detail-tabs button").forEach((button) => button.addEventListener("click", () => {
   document.querySelectorAll(".detail-tabs button").forEach((item) => item.classList.toggle("active", item === button));
