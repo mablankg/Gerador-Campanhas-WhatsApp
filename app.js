@@ -78,6 +78,16 @@ function conversationSignature(messages = []) {
   return messages.map((item) => `${item.seq}:${item.id}:${item.from_me ? 1 : 0}:${item.text || ""}:${item.media?.id || 0}`).join("|");
 }
 
+function deduplicateMessages(messages = []) {
+  const seen = new Set();
+  return messages.filter((item) => {
+    const media = item.media || {};
+    const key = [item.sender || (item.from_me ? "me" : "unknown"), item.from_me ? 1 : 0, new Date(item.timestamp).toISOString(), item.text || "", media.type || "", media.file_name || "", media.file_size || 0, media.caption || ""].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+
 function shouldKeepRenderedConversation(key, messages, silent) {
   const signature = conversationSignature(messages);
   if (silent && renderedConversationKey === key && renderedConversationSignature === signature) return true;
@@ -240,11 +250,11 @@ function renderGroups() {
 async function loadGroupMessages(group, silent = false) {
   const thread = document.querySelector("#messageThread"); if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
-    const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`);
-    if (shouldKeepRenderedConversation(`group:${group.id}`, data.messages || [], silent)) return;
+    const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`); const messages = deduplicateMessages(data.messages || []);
+    if (shouldKeepRenderedConversation(`group:${group.id}`, messages, silent)) return;
     clearMediaObjectURLs(); thread.replaceChildren();
-    if (!data.messages?.length) { thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este grupo.</div>'; return; }
-    for (const item of data.messages) await renderMessageBubble(thread, item);
+    if (!messages.length) { thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este grupo.</div>'; return; }
+    for (const item of messages) await renderMessageBubble(thread, item);
     thread.scrollTop=thread.scrollHeight;
   } catch(error){ if (!silent) thread.innerHTML=`<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`; }
 }
@@ -452,14 +462,14 @@ async function loadContactMessages(contact, silent = false) {
   const thread = document.querySelector("#messageThread");
 	if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
-    const data = await call(`/api/contact-messages?id=${encodeURIComponent(contact.id)}`);
-    if (shouldKeepRenderedConversation(`contact:${contact.id}`, data.messages || [], silent)) return;
+    const data = await call(`/api/contact-messages?id=${encodeURIComponent(contact.id)}`); const messages = deduplicateMessages(data.messages || []);
+    if (shouldKeepRenderedConversation(`contact:${contact.id}`, messages, silent)) return;
     clearMediaObjectURLs(); thread.replaceChildren();
-    if (!data.messages?.length) {
+    if (!messages.length) {
       thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este contato.</div>';
       return;
     }
-    for (const item of data.messages) await renderMessageBubble(thread, item);
+    for (const item of messages) await renderMessageBubble(thread, item);
     thread.scrollTop = thread.scrollHeight;
   } catch (error) {
 	if (!silent) thread.innerHTML = `<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`;
