@@ -34,7 +34,7 @@ button:disabled { opacity: .55; cursor: wait; }
 .group-grid form + form { border-left: 1px solid #e1e9e4; padding-left: 36px; }
 .contacts-layout { display: grid; grid-template-columns: minmax(230px, .75fr) minmax(0, 1.6fr); gap: 30px; min-height: 420px; }
 .contacts-sidebar { border-right: 1px solid #e1e9e4; padding-right: 24px; }
-.contact-list { margin-top: 14px; display: grid; gap: 8px; max-height: 610px; overflow: auto; }
+.contact-list { margin-top: 14px; display: grid; grid-auto-rows: max-content; align-content: start; gap: 8px; max-height: 610px; overflow: auto; }
 .contact-item { position: relative; width: 100%; text-align: left; padding: 13px; background: #f5f8f6; color: #20352b; border: 1px solid transparent; transition: background .15s, border-color .15s, box-shadow .15s, transform .15s; }
 .contact-item:hover { background: #e7f3eb; border-color: #b7d7c3; }
 .contact-item.active, .contact-item[aria-current="true"] { background: linear-gradient(90deg, #ccebd7, #e7f6ec); color: #0b5030; border-color: #58a879; box-shadow: inset 5px 0 #08783f, 0 3px 12px #08783f24; transform: translateX(2px); }
