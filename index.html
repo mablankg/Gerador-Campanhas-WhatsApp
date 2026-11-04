@@ -32,55 +32,54 @@
         </form>
       </section>
 
-      <section class="card hidden" id="composer">
-        <form id="sendForm">
-          <label>Número com DDI e DDD
-            <input id="to" inputmode="numeric" autocomplete="tel" placeholder="5511999999999" maxlength="15" required />
-          </label>
-          <label>Mensagem
-            <textarea id="message" rows="7" maxlength="8000" placeholder="Escreva a mensagem..." required></textarea>
-          </label>
-          <div class="form-footer">
-            <small id="counter">0 / 8000</small>
-            <button id="sendButton" type="submit">Enviar mensagem</button>
-          </div>
-        </form>
-        <div class="result hidden" id="result" role="status" aria-live="polite"></div>
-      </section>
+      <section class="service-workspace hidden" id="contactsCard">
+        <aside class="contact-rail" id="contactRail">
+          <div class="rail-heading"><div><p class="eyebrow">CRM</p><h2>Contatos</h2></div><button class="icon-button" id="toggleContactRail" type="button" title="Recolher contatos">‹</button></div>
+          <div class="rail-actions"><button class="secondary" id="syncContacts" type="button">Sincronizar</button><button id="newContact" type="button">Novo</button></div>
+          <input id="contactSearch" type="search" placeholder="Nome, apelido ou telefone" />
+          <div class="contact-filters"><select id="contactTypeFilter"><option value="">Todos os tipos</option><option value="lead">Lead</option><option value="client">Cliente</option><option value="partner">Parceiro</option><option value="other">Outro</option></select><select id="contactStatusFilter"><option value="">Todos os status</option><option value="active">Ativo</option><option value="waiting">Aguardando</option><option value="finished">Finalizado</option></select></div>
+          <div class="contact-list" id="contactList"><p class="muted">Carregando contatos...</p></div>
+        </aside>
 
-      <section class="card contacts-card hidden" id="contactsCard">
-        <div class="section-heading">
-          <div><p class="eyebrow">CRM</p><h2>Contatos</h2></div>
-          <div class="heading-actions"><button class="secondary" id="syncContacts" type="button">Sincronizar WhatsApp</button><button id="newContact" type="button">Novo contato</button></div>
-        </div>
-        <div class="contacts-layout">
-          <aside class="contacts-sidebar">
-            <input id="contactSearch" type="search" placeholder="Buscar por nome, telefone ou e-mail" />
-            <div class="contact-list" id="contactList"><p class="muted">Carregando contatos...</p></div>
-          </aside>
-          <form class="contact-form hidden" id="contactForm">
-            <input id="contactId" type="hidden" />
-            <div class="contact-form-heading"><h3 id="contactFormTitle">Contato</h3><span id="contactPhoneLabel"></span></div>
-            <div class="contact-fields">
+        <section class="conversation-pane">
+          <div class="conversation-header"><button class="icon-button show-left" id="showContactRail" type="button">☰</button><div><h2 id="conversationName">Selecione um contato</h2><span id="conversationPhone">Escolha uma conversa na lista</span></div><button class="icon-button show-right" id="showDetailRail" type="button">☷</button></div>
+          <div class="message-thread" id="messageThread"><div class="empty-conversation">Selecione um contato para visualizar as mensagens.</div></div>
+          <form class="message-composer" id="sendForm">
+            <input id="to" type="hidden" />
+            <textarea id="message" rows="2" maxlength="8000" placeholder="Digite uma mensagem..." required disabled></textarea>
+            <div class="composer-actions"><small id="counter">0 / 8000</small><button id="sendButton" type="submit" disabled>Enviar</button></div>
+          </form>
+          <div class="result hidden" id="result" role="status" aria-live="polite"></div>
+        </section>
+
+        <aside class="detail-rail" id="detailRail">
+          <div class="detail-heading"><strong id="detailContactName">Detalhes</strong><button class="icon-button" id="toggleDetailRail" type="button" title="Recolher detalhes">›</button></div>
+          <div class="detail-tabs" role="tablist"><button class="active" type="button" data-tab="contact">Contato</button><button type="button" data-tab="history">Histórico</button><button type="button" data-tab="process">Processo</button><button type="button" data-tab="tasks">Tarefas</button></div>
+          <div class="detail-content">
+            <form class="contact-form hidden" id="contactForm" data-panel="contact">
+              <input id="contactId" type="hidden" />
+              <div class="contact-form-heading"><h3 id="contactFormTitle">Contato</h3><span id="contactPhoneLabel"></span></div>
               <label>Nome<input id="contactName" maxlength="160" /></label>
+              <label>Apelido<input id="contactNickname" maxlength="80" /></label>
               <label>Telefone<input id="contactPhone" inputmode="numeric" maxlength="15" /></label>
               <label>E-mail<input id="contactEmail" type="email" maxlength="254" /></label>
               <label>CPF/CNPJ<input id="contactTaxId" maxlength="32" /></label>
-              <label>Tipo<select id="contactType"><option value="lead">Lead</option><option value="client">Cliente</option><option value="partner">Parceiro</option><option value="other">Outro</option></select></label>
-              <label>Status<select id="contactStatus"><option value="active">Ativo</option><option value="waiting">Aguardando</option><option value="finished">Finalizado</option></select></label>
+              <div class="contact-fields"><label>Tipo<select id="contactType"><option value="lead">Lead</option><option value="client">Cliente</option><option value="partner">Parceiro</option><option value="other">Outro</option></select></label><label>Status<select id="contactStatus"><option value="active">Ativo</option><option value="waiting">Aguardando</option><option value="finished">Finalizado</option></select></label></div>
               <label>Responsável<input id="contactResponsible" maxlength="160" /></label>
               <label>Etiquetas<input id="contactTags" placeholder="cliente, urgente, retorno" /></label>
-            </div>
-            <label>Observações internas<textarea id="contactNotes" rows="4" maxlength="20000"></textarea></label>
-            <label>Informações complementares
-              <textarea id="contactExtra" rows="5" placeholder="Empresa: Exemplo Ltda.&#10;Origem: Indicação&#10;Cidade: São Paulo"></textarea>
-              <small>Use uma informação por linha no formato Campo: valor.</small>
-            </label>
-            <div class="contact-actions"><button class="secondary" id="archiveContact" type="button">Arquivar</button><button id="saveContact" type="submit">Salvar contato</button></div>
-          </form>
-          <div class="contact-empty" id="contactEmpty"><p>Selecione um contato ou crie um novo cadastro.</p></div>
-        </div>
-        <div class="result hidden" id="contactResult" role="status" aria-live="polite"></div>
+              <label>Observações internas<textarea id="contactNotes" rows="4" maxlength="20000"></textarea></label>
+              <div class="extra-fields" id="contactExtraFields"></div>
+              <label>Adicionar informação<div class="inline-field"><input id="newExtraKey" placeholder="Ex.: Empresa" /><input id="newExtraValue" placeholder="Valor" /><button class="secondary" id="addExtraField" type="button">+</button></div></label>
+              <textarea class="hidden" id="contactExtra"></textarea>
+              <div class="contact-actions"><button class="secondary" id="archiveContact" type="button">Arquivar</button><button id="saveContact" type="submit">Salvar</button></div>
+            </form>
+            <section class="detail-panel hidden" data-panel="history" id="historyPanel"><h3>Histórico</h3><div id="historyContent" class="timeline muted">Selecione um contato.</div></section>
+            <section class="detail-panel hidden" data-panel="process"><h3>Processo</h3><p class="muted">A vinculação de processos será adicionada na próxima etapa.</p><button type="button" disabled>Vincular processo</button></section>
+            <section class="detail-panel hidden" data-panel="tasks"><h3>Tarefas e agenda</h3><p class="muted">Área preparada para compromissos, retornos e prazos do contato.</p><label>Nova tarefa<input id="taskTitle" placeholder="Ex.: Retornar ligação" /></label><label>Data e hora<input id="taskDue" type="datetime-local" /></label><button id="addTask" type="button" disabled>Adicionar tarefa</button></section>
+            <div class="contact-empty" id="contactEmpty"><p>Selecione um contato ou crie um novo cadastro.</p></div>
+          </div>
+          <div class="result hidden" id="contactResult" role="status" aria-live="polite"></div>
+        </aside>
       </section>
 
       <section class="card groups-card hidden" id="groupsCard">
