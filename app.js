@@ -26,6 +26,8 @@ let liveRefreshTimer = null;
 let liveRefreshBusy = false;
 let liveRefreshCycle = 0;
 let mediaObjectURLs = [];
+let renderedConversationKey = "";
+let renderedConversationSignature = "";
 accessTokenInput.value = accessToken;
 
 togglePassword.addEventListener("click", () => {
@@ -61,6 +63,18 @@ async function call(path, options = {}) {
 function clearMediaObjectURLs() {
   for (const url of mediaObjectURLs) URL.revokeObjectURL(url);
   mediaObjectURLs = [];
+}
+
+function conversationSignature(messages = []) {
+  return messages.map((item) => `${item.seq}:${item.id}:${item.from_me ? 1 : 0}:${item.text || ""}:${item.media?.id || 0}`).join("|");
+}
+
+function shouldKeepRenderedConversation(key, messages, silent) {
+  const signature = conversationSignature(messages);
+  if (silent && renderedConversationKey === key && renderedConversationSignature === signature) return true;
+  renderedConversationKey = key;
+  renderedConversationSignature = signature;
+  return false;
 }
 
 async function appendMessageMedia(bubble, media) {
@@ -181,7 +195,9 @@ function renderGroups() {
 async function loadGroupMessages(group, silent = false) {
   const thread = document.querySelector("#messageThread"); if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
-    const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`); clearMediaObjectURLs(); thread.replaceChildren();
+    const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`);
+    if (shouldKeepRenderedConversation(`group:${group.id}`, data.messages || [], silent)) return;
+    clearMediaObjectURLs(); thread.replaceChildren();
     if (!data.messages?.length) { thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este grupo.</div>'; return; }
     for (const item of data.messages) await renderMessageBubble(thread, item);
     thread.scrollTop=thread.scrollHeight;
@@ -304,6 +320,7 @@ async function loadContactMessages(contact, silent = false) {
 	if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
     const data = await call(`/api/contact-messages?id=${encodeURIComponent(contact.id)}`);
+    if (shouldKeepRenderedConversation(`contact:${contact.id}`, data.messages || [], silent)) return;
     clearMediaObjectURLs(); thread.replaceChildren();
     if (!data.messages?.length) {
       thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este contato.</div>';
