@@ -154,7 +154,7 @@ async function unlock() {
 }
 
 async function pollMessageEvents() {
-  const data = await call(`/api/message-events?after=${encodeURIComponent(messageEventCursor)}`);
+  const data = await call(`/api/status?after=${encodeURIComponent(messageEventCursor)}`);
   messageEventCursor = String(data.next_after ?? messageEventCursor);
   let changed = false;
   for (const item of data.messages || []) {
