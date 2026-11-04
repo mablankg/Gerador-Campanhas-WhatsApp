@@ -35,10 +35,18 @@
       <section class="service-workspace hidden" id="contactsCard">
         <aside class="contact-rail" id="contactRail">
           <div class="rail-heading"><div><p class="eyebrow">CRM</p><h2>Contatos</h2></div><button class="icon-button" id="toggleContactRail" type="button" title="Recolher contatos">‹</button></div>
-          <div class="rail-actions"><button class="secondary" id="syncContacts" type="button">Sincronizar</button><button id="newContact" type="button">Novo</button></div>
-          <input id="contactSearch" type="search" placeholder="Nome, apelido ou telefone" />
-          <div class="contact-filters"><select id="contactTypeFilter"><option value="">Todos os tipos</option><option value="lead">Lead</option><option value="client">Cliente</option><option value="partner">Parceiro</option><option value="other">Outro</option></select><select id="contactStatusFilter"><option value="">Todos os status</option><option value="active">Ativo</option><option value="waiting">Aguardando</option><option value="finished">Finalizado</option></select></div>
-          <div class="contact-list" id="contactList"><p class="muted">Carregando contatos...</p></div>
+          <div class="crm-mode-tabs"><button class="active" id="contactsModeTab" type="button">Contatos</button><button id="groupsModeTab" type="button">Grupos</button></div>
+          <div id="contactsMode">
+            <div class="rail-actions"><button class="secondary" id="syncContacts" type="button">Sincronizar</button><button id="newContact" type="button">Novo</button></div>
+            <input id="contactSearch" type="search" placeholder="Nome, apelido ou telefone" />
+            <div class="contact-filters"><select id="contactTypeFilter"><option value="">Todos os tipos</option><option value="lead">Lead</option><option value="client">Cliente</option><option value="partner">Parceiro</option><option value="other">Outro</option></select><select id="contactStatusFilter"><option value="">Todos os status</option><option value="active">Ativo</option><option value="waiting">Aguardando</option><option value="finished">Finalizado</option></select></div>
+            <div class="contact-list" id="contactList"><p class="muted">Carregando contatos...</p></div>
+          </div>
+          <div class="hidden" id="groupsMode">
+            <div class="rail-actions"><button class="secondary" id="syncGroupsRail" type="button">Atualizar</button><button id="newGroupRail" type="button">Novo</button></div>
+            <input id="groupSearch" type="search" placeholder="Buscar grupo" />
+            <div class="contact-list" id="groupList"><p class="muted">Carregando grupos...</p></div>
+          </div>
         </aside>
 
         <section class="conversation-pane">
@@ -54,7 +62,7 @@
 
         <aside class="detail-rail" id="detailRail">
           <div class="detail-heading"><strong id="detailContactName">Detalhes</strong><button class="icon-button" id="toggleDetailRail" type="button" title="Recolher detalhes">›</button></div>
-          <div class="detail-tabs" role="tablist"><button class="active" type="button" data-tab="contact">Contato</button><button type="button" data-tab="history">Histórico</button><button type="button" data-tab="process">Processo</button><button type="button" data-tab="tasks">Tarefas</button></div>
+          <div class="detail-tabs" role="tablist"><button class="active" id="entityDetailsTab" type="button" data-tab="contact">Contato</button><button type="button" data-tab="history">Comentários</button><button type="button" data-tab="process">Processo</button><button type="button" data-tab="tasks">Tarefas</button></div>
           <div class="detail-content">
             <form class="contact-form hidden" id="contactForm" data-panel="contact">
               <input id="contactId" type="hidden" />
@@ -73,7 +81,8 @@
               <textarea class="hidden" id="contactExtra"></textarea>
               <div class="contact-actions"><button class="secondary" id="archiveContact" type="button">Arquivar</button><button id="saveContact" type="submit">Salvar</button></div>
             </form>
-            <section class="detail-panel hidden" data-panel="history" id="historyPanel"><h3>Histórico</h3><div id="historyContent" class="timeline muted">Selecione um contato.</div></section>
+            <section class="detail-panel hidden" data-panel="group" id="groupDetail"><h3 id="groupDetailName">Grupo</h3><label>Nome<input id="groupDetailNameField" readonly /></label><label>Participantes<input id="groupParticipantCount" readonly /></label><label>Tópico<textarea id="groupTopic" readonly></textarea></label><label>Tipo<input id="groupAnnounce" readonly /></label><small id="groupUpdatedAt" class="muted"></small></section>
+            <section class="detail-panel hidden" data-panel="history" id="historyPanel"><h3>Histórico de comentários</h3><form id="commentForm"><label>Novo comentário<textarea id="commentBody" rows="3" maxlength="8000" placeholder="Registre uma observação interna..."></textarea></label><button type="submit">Adicionar comentário</button></form><div id="historyContent" class="timeline muted">Selecione um contato ou grupo.</div></section>
             <section class="detail-panel hidden" data-panel="process"><h3>Processo</h3><p class="muted">A vinculação de processos será adicionada na próxima etapa.</p><button type="button" disabled>Vincular processo</button></section>
             <section class="detail-panel hidden" data-panel="tasks"><h3>Tarefas e agenda</h3><p class="muted">Área preparada para compromissos, retornos e prazos do contato.</p><label>Nova tarefa<input id="taskTitle" placeholder="Ex.: Retornar ligação" /></label><label>Data e hora<input id="taskDue" type="datetime-local" /></label><button id="addTask" type="button" disabled>Adicionar tarefa</button></section>
             <div class="contact-empty" id="contactEmpty"><p>Selecione um contato ou crie um novo cadastro.</p></div>

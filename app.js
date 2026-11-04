@@ -20,6 +20,8 @@ const contactResult = document.querySelector("#contactResult");
 let accessToken = localStorage.getItem("campaign_access") || "";
 let allContacts = [];
 let activeContact = null;
+let allGroups = [];
+let activeGroup = null;
 accessTokenInput.value = accessToken;
 
 togglePassword.addEventListener("click", () => {
@@ -70,7 +72,6 @@ async function unlock() {
   if (!accessToken || !(await status())) return;
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
-  groupsCard.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
   await Promise.all([loadGroups(), loadContacts()]);
 }
@@ -89,20 +90,68 @@ async function loadGroups() {
   try {
     const data = await call("/api/groups");
     groupSelect.replaceChildren();
+    allGroups = data.groups || [];
     if (!data.groups?.length) {
       groupSelect.add(new Option("Nenhum grupo encontrado", ""));
+	  renderGroups();
       return;
     }
     groupSelect.add(new Option("Selecione um grupo", ""));
     for (const group of data.groups) groupSelect.add(new Option(`${group.name} (${group.participant_count})`, group.id));
+    renderGroups();
   } catch (error) {
     groupSelect.replaceChildren(new Option("Não foi possível carregar", ""));
     showGroupResult(`Falha ao carregar grupos: ${error.message}`, true);
   }
 }
 
-async function syncGroups() {
-  const button = document.querySelector("#refreshGroups");
+function renderGroups() {
+  const list = document.querySelector("#groupList");
+  const query = document.querySelector("#groupSearch").value.trim().toLocaleLowerCase("pt-BR");
+  const groups = allGroups.filter((group) => !query || group.name.toLocaleLowerCase("pt-BR").includes(query));
+  list.replaceChildren();
+  if (!groups.length) { list.innerHTML = '<p class="muted">Nenhum grupo encontrado.</p>'; return; }
+  for (const group of groups) {
+    const button = document.createElement("button"); button.type = "button"; button.className = "contact-item"; button.dataset.id = group.id;
+    const name = document.createElement("strong"); name.textContent = group.name;
+    const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${group.participant_count} participantes${group.is_announce ? " · somente administradores" : ""}`;
+    button.append(name, detail); button.addEventListener("click", () => openGroup(group)); list.append(button);
+  }
+}
+
+async function loadGroupMessages(group) {
+  const thread = document.querySelector("#messageThread"); thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
+  try {
+    const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`); thread.replaceChildren();
+    if (!data.messages?.length) { thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este grupo.</div>'; return; }
+    for (const item of data.messages) {
+      const bubble=document.createElement("div"); bubble.className=`message-bubble${item.from_me?" mine":""}`;
+      const body=document.createElement("span"); body.textContent=item.text||"Mensagem sem texto";
+      const time=document.createElement("time"); time.textContent=new Date(item.timestamp).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"});
+      bubble.append(body,time); thread.append(bubble);
+    }
+    thread.scrollTop=thread.scrollHeight;
+  } catch(error){ thread.innerHTML=`<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`; }
+}
+
+function openGroup(group) {
+  activeGroup=group; activeContact=null; contactForm.classList.add("hidden"); contactEmpty.classList.add("hidden");
+  document.querySelector("#conversationName").textContent=group.name; document.querySelector("#conversationPhone").textContent=`${group.participant_count} participantes`;
+  document.querySelector("#detailContactName").textContent=group.name; document.querySelector("#entityDetailsTab").textContent="Grupo"; document.querySelector("#entityDetailsTab").dataset.tab="group";
+  document.querySelector("#groupDetailName").textContent=group.name; document.querySelector("#groupDetailNameField").value=group.name;
+  document.querySelector("#groupParticipantCount").value=group.participant_count; document.querySelector("#groupTopic").value=group.topic||"";
+  document.querySelector("#groupAnnounce").value=group.is_announce?"Somente administradores":"Todos podem enviar";
+  document.querySelector("#groupUpdatedAt").textContent=`Atualizado em ${new Date(group.updated_at).toLocaleString("pt-BR")}`;
+  document.querySelector("#to").value=group.id; message.disabled=false; sendButton.disabled=false;
+  document.querySelectorAll(".detail-tabs button").forEach((item,index)=>item.classList.toggle("active",index===0));
+  document.querySelectorAll("[data-panel]").forEach((panel)=>panel.classList.toggle("hidden",panel.dataset.panel!=="group"));
+  document.querySelectorAll("#groupList .contact-item").forEach((item)=>item.classList.toggle("active",item.dataset.id===group.id));
+  loadGroupMessages(group); loadComments();
+}
+
+async function syncGroups(event) {
+  const button = event?.currentTarget || document.querySelector("#refreshGroups");
+	const originalText = button.textContent;
   button.disabled = true;
   button.textContent = "Sincronizando...";
   showGroupResult("Consultando os grupos diretamente no WhatsApp...");
@@ -115,8 +164,25 @@ async function syncGroups() {
     showGroupResult(`Não foi possível atualizar os grupos: ${error.message}`, true);
   } finally {
     button.disabled = false;
-    button.textContent = "Atualizar lista";
+	button.textContent = originalText;
   }
+}
+
+function activeEntity() {
+  if (activeContact) return { type: "contact", id: String(activeContact.id) };
+  if (activeGroup) return { type: "group", id: activeGroup.id };
+  return null;
+}
+
+async function loadComments() {
+  const entity=activeEntity(); const content=document.querySelector("#historyContent");
+  if(!entity){content.textContent="Selecione um contato ou grupo.";return;}
+  try{
+    const data=await call(`/api/comments?entity_type=${entity.type}&entity_id=${encodeURIComponent(entity.id)}`);
+    content.replaceChildren();
+    if(!data.comments?.length){content.textContent="Nenhum comentário registrado.";return;}
+    for(const comment of data.comments){const item=document.createElement("div");item.className="timeline-item";const body=document.createElement("div");body.textContent=comment.body;const date=document.createElement("small");date.textContent=new Date(comment.created_at).toLocaleString("pt-BR");item.append(body,date);content.append(item);}
+  }catch(error){content.textContent=`Não foi possível carregar os comentários: ${error.message}`;}
 }
 
 function showContactResult(text, error = false) {
@@ -203,6 +269,7 @@ async function loadContactMessages(contact) {
 
 function openContact(contact = null) {
   activeContact = contact;
+	activeGroup = null;
   contactEmpty.classList.add("hidden");
   contactForm.classList.remove("hidden");
   document.querySelector("#contactId").value = contact?.id || "";
@@ -226,12 +293,16 @@ function openContact(contact = null) {
 	document.querySelector("#conversationName").textContent = contact ? contactDisplayName(contact) : "Novo contato";
 	document.querySelector("#conversationPhone").textContent = contact ? formatPhone(contact.phone) : "Preencha a ficha ao lado";
 	document.querySelector("#detailContactName").textContent = contact ? contactDisplayName(contact) : "Novo contato";
+	document.querySelector("#entityDetailsTab").textContent = "Contato";
+	document.querySelector("#entityDetailsTab").dataset.tab = "contact";
 	document.querySelector("#to").value = contact?.phone || "";
 	message.disabled = !contact;
 	sendButton.disabled = !contact;
 	const history = document.querySelector("#historyContent");
 	history.innerHTML = contact ? `<div class="timeline-item"><strong>Primeiro contato</strong><br>${new Date(contact.first_contact_at).toLocaleString("pt-BR")}</div><div class="timeline-item"><strong>Última atividade</strong><br>${new Date(contact.last_contact_at).toLocaleString("pt-BR")}</div>` : "Salve o contato para iniciar o histórico.";
-	if (contact) loadContactMessages(contact); else document.querySelector("#messageThread").innerHTML = '<div class="empty-conversation">Salve o contato para iniciar a conversa.</div>';
+	document.querySelectorAll(".detail-tabs button").forEach((item,index)=>item.classList.toggle("active",index===0));
+	document.querySelectorAll("[data-panel]").forEach((panel)=>panel.classList.toggle("hidden",panel.dataset.panel!=="contact"));
+	if (contact) { loadContactMessages(contact); loadComments(); } else document.querySelector("#messageThread").innerHTML = '<div class="empty-conversation">Salve o contato para iniciar a conversa.</div>';
 }
 
 function renderContacts() {
@@ -269,7 +340,6 @@ accessForm.addEventListener("submit", async (event) => {
   if (!(await status())) return showResult("Senha de acesso inválida ou serviço indisponível.", true);
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
-  groupsCard.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
   await Promise.all([loadGroups(), loadContacts()]);
 });
@@ -281,6 +351,17 @@ document.querySelector("#contactSearch").addEventListener("input", (event) => {
 });
 document.querySelector("#contactTypeFilter").addEventListener("change", renderContacts);
 document.querySelector("#contactStatusFilter").addEventListener("change", renderContacts);
+document.querySelector("#groupSearch").addEventListener("input", renderGroups);
+
+function switchCRMMode(mode){
+  const contacts=mode==="contacts"; document.querySelector("#contactsMode").classList.toggle("hidden",!contacts); document.querySelector("#groupsMode").classList.toggle("hidden",contacts);
+  document.querySelector("#contactsModeTab").classList.toggle("active",contacts); document.querySelector("#groupsModeTab").classList.toggle("active",!contacts);
+  document.querySelector(".rail-heading h2").textContent=contacts?"Contatos":"Grupos";
+}
+document.querySelector("#contactsModeTab").addEventListener("click",()=>switchCRMMode("contacts"));
+document.querySelector("#groupsModeTab").addEventListener("click",()=>switchCRMMode("groups"));
+document.querySelector("#syncGroupsRail").addEventListener("click",syncGroups);
+document.querySelector("#newGroupRail").addEventListener("click",()=>{groupsCard.classList.remove("hidden");groupsCard.scrollIntoView({behavior:"smooth"});});
 
 document.querySelector("#toggleContactRail").addEventListener("click", () => { document.querySelector("#contactRail").classList.add("collapsed"); contactsCard.classList.add("left-collapsed"); });
 document.querySelector("#showContactRail").addEventListener("click", () => { document.querySelector("#contactRail").classList.remove("collapsed"); contactsCard.classList.remove("left-collapsed"); });
@@ -291,7 +372,14 @@ document.querySelectorAll(".detail-tabs button").forEach((button) => button.addE
   document.querySelectorAll(".detail-tabs button").forEach((item) => item.classList.toggle("active", item === button));
   document.querySelectorAll("[data-panel]").forEach((panel) => panel.classList.toggle("hidden", panel.dataset.panel !== button.dataset.tab));
   contactEmpty.classList.toggle("hidden", Boolean(activeContact) || button.dataset.tab !== "contact");
+	if(button.dataset.tab==="history") loadComments();
 }));
+
+document.querySelector("#commentForm").addEventListener("submit",async(event)=>{
+  event.preventDefault(); const entity=activeEntity(); const body=document.querySelector("#commentBody"); if(!entity||!body.value.trim())return;
+  try{await call(`/api/comments?entity_type=${entity.type}&entity_id=${encodeURIComponent(entity.id)}`,{method:"POST",body:JSON.stringify({body:body.value})});body.value="";await loadComments();}
+  catch(error){showContactResult(`Não foi possível salvar o comentário: ${error.message}`,true);}
+});
 
 document.querySelector("#addExtraField").addEventListener("click", () => {
   const key = document.querySelector("#newExtraKey"); const value = document.querySelector("#newExtraValue");
@@ -375,16 +463,16 @@ sendForm.addEventListener("submit", async (event) => {
   sendButton.disabled = true;
   sendButton.textContent = "Enviando...";
   try {
-    const queued = await call("/api/send", {
-      method: "POST",
-      body: JSON.stringify({ to: document.querySelector("#to").value.replace(/\D/g, ""), text: message.value }),
-    });
+	const queued = activeGroup
+	  ? await call("/api/group-send", { method: "POST", body: JSON.stringify({ group_id: activeGroup.id, text: message.value }) })
+	  : await call("/api/send", { method: "POST", body: JSON.stringify({ to: document.querySelector("#to").value.replace(/\D/g, ""), text: message.value }) });
     showResult("Mensagem recebida pela fila. Aguardando o WhatsApp...");
     const completed = await poll(queued.id);
 	showResult(`Mensagem enviada. ID: ${completed.message_id || "confirmado"}`);
 	message.value = "";
     counter.textContent = "0 / 8000";
 	if (activeContact) await loadContactMessages(activeContact);
+	if (activeGroup) await loadGroupMessages(activeGroup);
   } catch (error) {
     if (error.status === 401) { localStorage.removeItem("campaign_access"); accessToken = ""; accessCard.classList.remove("hidden"); composer.classList.add("hidden"); groupsCard.classList.add("hidden"); }
     showResult(`Não foi possível enviar: ${error.message}`, true);
