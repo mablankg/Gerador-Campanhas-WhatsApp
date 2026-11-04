@@ -65,6 +65,8 @@ h3 { margin: 0 0 22px; font-size: 19px; }
 .rail-actions, .contact-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
 .rail-actions button { padding: 10px 8px; }
 .contact-filters select { padding: 10px 8px; font-size: 13px; }
+.contact-filters #contactStageFilter { grid-column: 1 / -1; }
+#contactsMode .contact-list { height: calc(100vh - 323px); }
 .contact-list { max-height: calc(100vh - 385px); }
 .contact-item { border-radius: 11px; }
 .contact-item .contact-summary { color: #718078; margin-top: 4px; }

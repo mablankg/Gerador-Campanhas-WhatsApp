@@ -421,8 +421,10 @@ async function loadStages() {
   const data = await call("/api/contacts?resource=stages");
   attendanceStages = (data.stages || []).map((item) => [item.id, item.name, item.color]);
   const select = document.querySelector("#contactStage"); const current = select.value;
-  select.replaceChildren(...attendanceStages.map(([id, name]) => new Option(name, id)));
-  if (attendanceStages.some(([id]) => id === current)) select.value = current;
+  select.replaceChildren(new Option("Sem etapa", ""), ...attendanceStages.map(([id, name]) => new Option(name, id)));
+  if (!current || attendanceStages.some(([id]) => id === current)) select.value = current;
+  const stageFilter=document.querySelector("#contactStageFilter"); const filterCurrent=stageFilter.value;
+  stageFilter.replaceChildren(new Option("Todas as etapas","all"),new Option("Sem etapa","none"),...attendanceStages.map(([id,name])=>new Option(name,id))); stageFilter.value=filterCurrent||"all";
   const groupStage = document.querySelector("#groupStage"); const groupCurrent=groupStage.value;
   groupStage.replaceChildren(...attendanceStages.map(([id,name])=>new Option(name,id))); if(attendanceStages.some(([id])=>id===groupCurrent))groupStage.value=groupCurrent;
   renderStageEditor();
@@ -509,7 +511,7 @@ function openContact(contact = null) {
   document.querySelector("#contactTaxId").value = contact?.tax_id || "";
   document.querySelector("#contactType").value = contact?.contact_type || "lead";
   document.querySelector("#contactStatus").value = contact?.status || "active";
-	document.querySelector("#contactStage").value = contact?.attendance_stage || "new";
+	document.querySelector("#contactStage").value = contact ? (contact.attendance_stage || "") : "new";
 	document.querySelector("#contactPriority").value = contact?.priority || "normal";
   document.querySelector("#contactResponsible").value = contact?.responsible || "";
   document.querySelector("#contactTags").value = (contact?.tags || []).join(", ");
@@ -536,20 +538,22 @@ function openContact(contact = null) {
 function renderContacts() {
 	const type = document.querySelector("#contactTypeFilter").value;
 	const status = document.querySelector("#contactStatusFilter").value;
+	const stageFilter = document.querySelector("#contactStageFilter").value;
 	const contacts = allContacts
 	  .filter((contact) => (!type || contact.contact_type === type) && (!status || contact.status === status))
+	  .filter((contact) => stageFilter === "all" || (stageFilter === "none" ? !contact.attendance_stage : contact.attendance_stage === stageFilter))
 	  .sort((left, right) => contactDisplayName(left).localeCompare(contactDisplayName(right), "pt-BR", { sensitivity: "base", numeric: true }));
 	contactList.replaceChildren();
 	if (!contacts.length) { contactList.innerHTML = '<p class="muted">Nenhum contato encontrado.</p>'; return; }
 	for (const contact of contacts) {
 		const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${String(activeContact?.id||"")===String(contact.id)?" active":""}${unreadContacts.has(String(contact.id))?" incoming":""}`; button.dataset.id = contact.id;
 		const stage = attendanceStages.find(([key]) => key === (contact.attendance_stage || "new"));
-		button.style.setProperty("--stage-color", stage?.[2] || "#3f9cd0");
+		button.style.setProperty("--stage-color", stage?.[2] || "#9aa8a0");
 		if (String(activeContact?.id || "") === String(contact.id)) button.setAttribute("aria-current", "true");
 		const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
 		const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${formatPhone(contact.phone)} · ${contact.contact_type || "lead"} · ${contact.status || "active"}`;
 		button.append(name, detail);
-		const workflow = document.createElement("small"); workflow.className = `contact-workflow priority-${contact.priority || "normal"}`; workflow.style.borderLeftColor = stage?.[2] || "#3f9cd0"; workflow.textContent = `${stage?.[1] || "Novo"} · ${priorityLabels[contact.priority || "normal"]}`; button.append(workflow);
+		const workflow = document.createElement("small"); workflow.className = `contact-workflow priority-${contact.priority || "normal"}`; workflow.style.borderLeftColor = stage?.[2] || "#9aa8a0"; workflow.textContent = `${stage?.[1] || "Sem etapa"} · ${priorityLabels[contact.priority || "normal"]}`; button.append(workflow);
 		const extraEntries = Object.entries(contact.extra || {}).slice(0, 2);
 		if (extraEntries.length) { const extra = document.createElement("small"); extra.className = "contact-extra-preview"; extra.textContent = extraEntries.map(([key, value]) => `${key}: ${value}`).join(" · "); button.append(extra); }
 		button.addEventListener("click", () => openContact(contact)); contactList.append(button);
@@ -589,6 +593,7 @@ document.querySelector("#contactSearch").addEventListener("input", (event) => {
 });
 document.querySelector("#contactTypeFilter").addEventListener("change", renderContacts);
 document.querySelector("#contactStatusFilter").addEventListener("change", renderContacts);
+document.querySelector("#contactStageFilter").addEventListener("change", renderContacts);
 let kanbanSearchTimer;
 document.querySelector("#kanbanSearch").addEventListener("input", (event) => {
   clearTimeout(kanbanSearchTimer);
