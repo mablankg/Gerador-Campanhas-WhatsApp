@@ -210,12 +210,12 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .priority-high { background: #ffead4; color: #9a4b00; }
 .priority-normal { background: #dff0ff; color: #155e94; }
 .priority-low { background: #e7eee9; color: #596a60; }
-.kanban-columns { flex: 1; min-height: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 10px; padding: 12px; overflow: auto; align-items: start; }
-.kanban-column { max-height: 100%; display: flex; flex-direction: column; padding: 8px; border-radius: 12px; background: #f3f6f4cc; border: 2px solid transparent; border-top: 5px solid var(--stage-color, #3f9cd0); transition: .15s; }
+.kanban-columns { flex: 1; min-height: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 10px; padding: 12px; overflow-x: auto; overflow-y: hidden; align-items: stretch; }
+.kanban-column { height: 100%; min-height: 0; display: flex; flex-direction: column; padding: 8px; border-radius: 12px; background: #f3f6f4cc; border: 2px solid transparent; border-top: 5px solid var(--stage-color, #3f9cd0); transition: .15s; overflow: hidden; }
 .kanban-column.drag-over { border-color: #16834b; background: #e3f3e9; }
-.kanban-column-heading { display: flex; justify-content: space-between; align-items: center; padding: 4px 5px 10px; }
+.kanban-column-heading { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 4px 5px 10px; background: #f3f6f4; position: sticky; top: 0; z-index: 2; }
 .kanban-column-heading span { min-width: 23px; padding: 3px 6px; border-radius: 999px; text-align: center; background: #dfe8e2; font-size: 10px; }
-.kanban-card-list { min-height: 50px; overflow-y: auto; display: grid; gap: 7px; }
+.kanban-card-list { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: 7px; padding-right: 3px; }
 .kanban-card { position: relative; display: grid; gap: 5px; padding: 10px; border-radius: 10px; background: #fff; border: 1px solid #d7e1da; border-top: 4px solid #6aa5ce; box-shadow: 0 2px 7px #173c2614; cursor: grab; }
 .kanban-card:hover { box-shadow: 0 5px 15px #173c2625; transform: translateY(-1px); }
 .kanban-card.dragging { opacity: .45; }
