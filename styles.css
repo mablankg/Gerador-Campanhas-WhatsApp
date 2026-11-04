@@ -166,6 +166,7 @@ body { overflow: hidden; }
 
 /* Painéis laterais redimensionáveis */
 .service-workspace { --left-rail-width: 280px; --right-rail-width: 350px; grid-template-columns: var(--left-rail-width) 6px minmax(360px, 1fr) 6px var(--right-rail-width); }
+.service-workspace.hidden { display: none; }
 .panel-resizer { position: relative; z-index: 8; width: 6px; cursor: col-resize; touch-action: none; background: #edf3ef; border-left: 1px solid #dce6df; border-right: 1px solid #dce6df; }
 .panel-resizer::after { content: ""; position: absolute; inset: 0 -4px; }
 .panel-resizer:hover, .panel-resizer.dragging { background: #39a66b; }
