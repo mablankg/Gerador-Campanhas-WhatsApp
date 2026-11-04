@@ -144,7 +144,7 @@ body { font-size: 13px; }
 /* Encaixe integral na janela */
 html, body { height: 100%; }
 body { overflow: hidden; }
-.shell { height: 100vh; padding: 10px 12px; display: flex; flex-direction: column; }
+.shell { width: 100%; max-width: none; height: 100vh; padding: 8px 10px; display: flex; flex-direction: column; }
 .shell > header { flex: 0 0 auto; min-height: 58px; margin-bottom: 9px; align-items: center; }
 .shell > header h1 { font-size: 25px; line-height: 1.05; }
 .shell > header .sub { margin: 4px 0 0; font-size: 12px; line-height: 1.3; }
