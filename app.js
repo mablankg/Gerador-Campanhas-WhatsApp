@@ -19,6 +19,7 @@ const contactEmpty = document.querySelector("#contactEmpty");
 const contactResult = document.querySelector("#contactResult");
 const kanbanBoard = document.querySelector("#kanbanBoard");
 const viewSwitch = document.querySelector("#viewSwitch");
+const conversationPane = document.querySelector(".conversation-pane");
 let accessToken = localStorage.getItem("campaign_access") || "";
 let activeAccountID = localStorage.getItem("blank_whatsapp_account") || "primary";
 let whatsappAccounts = [];
@@ -37,6 +38,7 @@ let renderedConversationSignature = "";
 let messageEventCursor = "latest";
 const unreadContacts = new Set();
 const unreadGroups = new Set();
+conversationPane.append(kanbanBoard, document.querySelector("#lawyerBoard"));
 const savedLeftPanelWidth = Number(localStorage.getItem("blank_left_panel_width"));
 const savedRightPanelWidth = Number(localStorage.getItem("blank_right_panel_width"));
 if (savedLeftPanelWidth >= 230 && savedLeftPanelWidth <= 520) contactsCard.style.setProperty("--left-rail-width", `${savedLeftPanelWidth}px`);
@@ -523,7 +525,7 @@ function renderLawyerBoard(){
 	}
 }
 
-function showLawyerView(){contactsCard.classList.add("hidden");contactsCard.style.display="none";kanbanBoard.classList.add("hidden");kanbanBoard.style.display="none";const board=document.querySelector("#lawyerBoard");board.classList.remove("hidden");document.querySelector("#conversationViewButton").classList.remove("active");document.querySelector("#boardViewButton").classList.remove("active");document.querySelector("#lawyerViewButton").classList.add("active");renderLawyerBoard();}
+function showLawyerView(){contactsCard.classList.remove("hidden");contactsCard.style.display="grid";contactsCard.setAttribute("aria-hidden","false");kanbanBoard.classList.add("hidden");const board=document.querySelector("#lawyerBoard");board.classList.remove("hidden");board.setAttribute("aria-hidden","false");conversationPane.classList.add("board-mode");document.querySelector("#conversationViewButton").classList.remove("active");document.querySelector("#boardViewButton").classList.remove("active");document.querySelector("#lawyerViewButton").classList.add("active");renderLawyerBoard();}
 
 function renderLawyerEditor(){const list=document.querySelector("#lawyerEditorList");list.replaceChildren();for(const lawyer of allLawyers){const item=document.createElement("button");item.type="button";item.className="stage-editor-item";const swatch=document.createElement("span");swatch.style.background=lawyer.color;const label=document.createElement("strong");label.textContent=lawyer.name;const edit=document.createElement("small");edit.textContent="Editar";item.append(swatch,label,edit);item.addEventListener("click",()=>{document.querySelector("#lawyerEditId").value=lawyer.id;document.querySelector("#lawyerName").value=lawyer.name;document.querySelector("#lawyerColor").value=lawyer.color});list.append(item)}}
 function resetLawyerForm(){document.querySelector("#lawyerEditId").value="";document.querySelector("#lawyerName").value="";document.querySelector("#lawyerColor").value="#177447";}
@@ -556,15 +558,15 @@ function renderStageEditor() {
 function resetStageForm() { document.querySelector("#stageEditId").value=""; document.querySelector("#stageName").value=""; document.querySelector("#stageColor").value="#3f9cd0"; }
 
 function showConversationView() {
-  kanbanBoard.classList.add("hidden"); kanbanBoard.style.display = "none"; kanbanBoard.setAttribute("aria-hidden", "true");
+  kanbanBoard.classList.add("hidden"); kanbanBoard.setAttribute("aria-hidden", "true");
+  document.querySelector("#lawyerBoard").classList.add("hidden"); document.querySelector("#lawyerBoard").setAttribute("aria-hidden", "true"); conversationPane.classList.remove("board-mode");
   contactsCard.classList.remove("hidden"); contactsCard.style.display = "grid"; contactsCard.setAttribute("aria-hidden", "false");
   document.querySelector("#conversationViewButton").classList.add("active"); document.querySelector("#boardViewButton").classList.remove("active");
 	document.querySelector("#lawyerBoard").classList.add("hidden"); document.querySelector("#lawyerViewButton").classList.remove("active");
 }
 
 function showBoardView() {
-  contactsCard.classList.add("hidden"); contactsCard.style.display = "none"; contactsCard.setAttribute("aria-hidden", "true");
-  kanbanBoard.classList.remove("hidden"); kanbanBoard.style.display = "flex"; kanbanBoard.setAttribute("aria-hidden", "false"); renderKanban();
+  contactsCard.classList.remove("hidden"); contactsCard.style.display = "grid"; contactsCard.setAttribute("aria-hidden", "false"); document.querySelector("#lawyerBoard").classList.add("hidden"); document.querySelector("#lawyerBoard").setAttribute("aria-hidden", "true"); conversationPane.classList.add("board-mode"); kanbanBoard.classList.remove("hidden"); kanbanBoard.setAttribute("aria-hidden", "false"); renderKanban();
   document.querySelector("#boardViewButton").classList.add("active"); document.querySelector("#conversationViewButton").classList.remove("active");
 	document.querySelector("#lawyerBoard").classList.add("hidden"); document.querySelector("#lawyerViewButton").classList.remove("active");
 }
@@ -830,6 +832,14 @@ document.querySelector("#syncContacts").addEventListener("click", async () => {
     button.disabled = false;
     button.textContent = "Sincronizar WhatsApp";
   }
+});
+
+document.querySelector("#resetDirectory").addEventListener("click", async () => {
+  if (!window.confirm("Isso apagará contatos e grupos do número selecionado, mas manterá as mensagens. Continuar?")) return;
+  const button=document.querySelector("#resetDirectory"); button.disabled=true; button.textContent="Limpando...";
+  try { const queued=await call("/api/directory-reset",{method:"POST",body:"{}"}); const completed=await poll(queued.id); await Promise.all([loadContacts(),loadGroups()]); showContactResult(`Base reimportada: ${completed.contact_count||0} contatos e ${completed.group_count||0} grupos.`); }
+  catch(error){showContactResult(`Não foi possível limpar e reimportar: ${error.message}`,true);}
+  finally{button.disabled=false;button.textContent="Limpar e reimportar";}
 });
 
 contactForm.addEventListener("submit", async (event) => {
