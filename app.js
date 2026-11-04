@@ -286,7 +286,7 @@ async function poll(id) {
 
 async function loadGroups() {
   try {
-    const data = await call("/api/groups");
+    const data = await call(`/api/groups?account=${encodeURIComponent(activeAccountID)}`);
     groupSelect.replaceChildren();
     allGroups = data.groups || [];
     if (!data.groups?.length) {
@@ -676,7 +676,9 @@ function renderContacts() {
 
 async function loadContacts(query = "", silent = false) {
   try {
-    const data = await call(`/api/contacts${query ? `?q=${encodeURIComponent(query)}` : ""}`);
+    const params = new URLSearchParams({ account: activeAccountID });
+    if (query) params.set("q", query);
+    const data = await call(`/api/contacts?${params.toString()}`);
 		allContacts = data.contacts || [];
 		if (activeContact) activeContact = allContacts.find((item) => String(item.id) === String(activeContact.id)) || activeContact;
 		renderContacts();

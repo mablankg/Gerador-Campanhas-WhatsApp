@@ -16,7 +16,9 @@ module.exports = async function handler(req, res) {
       return res.status(result.status).json(result.body);
     }
     if (req.method === "GET") {
-      const result = await upstream(config, "/v1/groups");
+      const account = String(req.query?.account || "");
+      const path = /^[a-z0-9][a-z0-9_-]{2,31}$/.test(account) ? `/v1/groups?account=${encodeURIComponent(account)}` : "/v1/groups";
+      const result = await upstream(config, path);
       return res.status(result.status).json(result.body);
     }
     const name = String(req.body?.name || "").trim();
