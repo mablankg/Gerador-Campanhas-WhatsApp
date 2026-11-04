@@ -20,6 +20,13 @@ module.exports = async function handler(req, res) {
       const result = await upstream(config, path, init);
       return res.status(result.status).json(result.body);
     }
+    if (resource === "lawyers") {
+      if (id && !/^[1-9][0-9]{0,18}$/.test(id)) return res.status(400).json({ error: "invalid_lawyer_id" });
+      const path = id ? `/v1/lawyers/${id}` : "/v1/lawyers";
+      const init = req.method === "GET" ? {} : { method: req.method, body: JSON.stringify(req.body || {}) };
+      const result = await upstream(config, path, init);
+      return res.status(result.status).json(result.body);
+    }
     if ((req.method === "PATCH" || (req.method === "GET" && id)) && !/^[1-9][0-9]{0,18}$/.test(id)) {
       return res.status(400).json({ error: "invalid_contact_id" });
     }

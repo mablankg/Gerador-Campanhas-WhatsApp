@@ -26,6 +26,7 @@ let qrPollTimer = null;
 let allContacts = [];
 let activeContact = null;
 let allGroups = [];
+let allLawyers = [];
 let activeGroup = null;
 let liveRefreshTimer = null;
 let liveRefreshBusy = false;
@@ -231,6 +232,7 @@ async function unlock() {
   viewSwitch.classList.remove("hidden");
   document.querySelector("#accountSwitch").classList.remove("hidden");
   await loadAccounts();
+	await loadLawyers();
   await Promise.all([loadGroups(), loadStages(), loadContacts()]);
 	await pollMessageEvents();
 	startLiveRefresh();
@@ -295,6 +297,7 @@ async function loadGroups() {
     for (const group of data.groups) groupSelect.add(new Option(`${group.name} (${group.participant_count})`, group.id));
     renderGroups();
     if (!kanbanBoard.classList.contains("hidden")) renderKanban();
+		if (!document.querySelector("#lawyerBoard").classList.contains("hidden")) renderLawyerBoard();
   } catch (error) {
     groupSelect.replaceChildren(new Option("Não foi possível carregar", ""));
     showGroupResult(`Falha ao carregar grupos: ${error.message}`, true);
@@ -316,7 +319,8 @@ function renderGroups() {
     const name = document.createElement("strong"); name.textContent = group.name;
     const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${group.participant_count} participantes${group.is_announce ? " · somente administradores" : ""}`;
     const workflow=document.createElement("small"); workflow.className=`contact-workflow priority-${group.priority||"normal"}`; workflow.style.borderLeftColor=stage?.[2]||"#3f9cd0"; workflow.textContent=`${stage?.[1]||"Novo"} · ${priorityLabels[group.priority||"normal"]}`;
-    button.append(name, detail, workflow); button.addEventListener("click", () => openGroup(group)); list.append(button);
+		button.append(name, detail, workflow); if(group.lawyer_name)button.append(createLawyerTag(group)); button.addEventListener("click", () => openGroup(group));
+		const wrapper=document.createElement("div");wrapper.className="selectable-card";const check=document.createElement("input");check.type="checkbox";check.checked=true;check.title="Desmarcar para arquivar";check.addEventListener("change",()=>archiveGroup(group));wrapper.append(check,button);list.append(wrapper);
   }
 }
 
@@ -341,6 +345,7 @@ function openGroup(group) {
   document.querySelector("#groupParticipantCount").value=group.participant_count; document.querySelector("#groupTopic").value=group.topic||"";
   document.querySelector("#groupAnnounce").value=group.is_announce?"Somente administradores":"Todos podem enviar";
   document.querySelector("#groupStage").value=group.attendance_stage||"new"; document.querySelector("#groupPriority").value=group.priority||"normal";
+	document.querySelector("#groupLawyer").value=String(group.lawyer_id||0);
   document.querySelector("#groupUpdatedAt").textContent=`Atualizado em ${new Date(group.updated_at).toLocaleString("pt-BR")}`;
   document.querySelector("#to").value=group.id; message.disabled=false; sendButton.disabled=false;
   document.querySelectorAll(".detail-tabs button").forEach((item,index)=>item.classList.toggle("active",index===0));
@@ -432,6 +437,11 @@ let attendanceStages = [
 const priorityLabels = { urgent: "Urgente", high: "Alta", normal: "Normal", low: "Baixa" };
 const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
 
+function createLawyerTag(entity) { const tag=document.createElement("span");tag.className="lawyer-tag";tag.style.setProperty("--lawyer-color",entity.lawyer_color||"#718078");tag.textContent=entity.lawyer_name;return tag; }
+
+async function archiveContactCard(contact) { try { await call(`/api/contacts?id=${encodeURIComponent(contact.id)}`,{method:"PATCH",body:JSON.stringify({archived:true})}); allContacts=allContacts.filter(item=>String(item.id)!==String(contact.id)); renderContacts(); renderKanban(); renderLawyerBoard(); } catch(error){showContactResult(`Não foi possível arquivar: ${error.message}`,true);} }
+async function archiveGroup(group) { try { await call(`/api/groups?id=${encodeURIComponent(group.id)}`,{method:"PATCH",body:JSON.stringify({attendance_stage:group.attendance_stage||"new",priority:group.priority||"normal",lawyer_id:group.lawyer_id||0,archived:true})}); allGroups=allGroups.filter(item=>item.id!==group.id); renderGroups(); renderKanban(); renderLawyerBoard(); } catch(error){showContactResult(`Não foi possível arquivar: ${error.message}`,true);} }
+
 function renderKanban() {
   const container = document.querySelector("#kanbanColumns");
   const query = document.querySelector("#kanbanSearch").value.trim().toLocaleLowerCase("pt-BR");
@@ -459,11 +469,12 @@ function renderKanban() {
       const unread = entity.entity_kind === "group" ? unreadGroups.has(entity.id) : unreadContacts.has(String(entity.id));
       const card = document.createElement("article"); card.className = `kanban-card priority-${entity.priority || "normal"}${unread ? " incoming" : ""}`; card.draggable = true; card.dataset.id = entityID; card.dataset.kind = entity.entity_kind;
       card.style.setProperty("--stage-color", color);
+			const archiveCheck=document.createElement("input");archiveCheck.type="checkbox";archiveCheck.checked=true;archiveCheck.className="card-archive-check";archiveCheck.title="Desmarcar para arquivar";archiveCheck.addEventListener("click",event=>event.stopPropagation());archiveCheck.addEventListener("change",()=>entity.entity_kind==="group"?archiveGroup(entity):archiveContactCard(entity));
       const priority = document.createElement("span"); priority.className = "kanban-priority"; priority.textContent = `${entity.entity_kind === "group" ? "Grupo · " : ""}${priorityLabels[entity.priority || "normal"]}`;
       const name = document.createElement("strong"); name.textContent = entity.entity_kind === "group" ? entity.name : contactDisplayName(entity);
       const phone = document.createElement("small"); phone.textContent = entity.entity_kind === "group" ? `${entity.participant_count} participantes` : formatPhone(entity.phone);
       const meta = document.createElement("div"); meta.className = "kanban-meta"; meta.textContent = entity.entity_kind === "group" ? (entity.is_announce ? "Somente administradores" : "Todos podem enviar") : (entity.responsible || entity.contact_type || "Lead");
-      card.append(priority, name, phone, meta);
+			card.append(archiveCheck,priority, name, phone, meta); if(entity.lawyer_name)card.append(createLawyerTag(entity));
       card.addEventListener("dragstart", (event) => { event.dataTransfer.setData("application/x-blank-entity", JSON.stringify({ id: entityID, kind: entity.entity_kind })); card.classList.add("dragging"); });
       card.addEventListener("dragend", () => card.classList.remove("dragging"));
       card.addEventListener("click", () => { if (entity.entity_kind === "group") openGroup(allGroups.find((item) => item.id === entity.id) || entity); else openContact(allContacts.find((item) => String(item.id) === String(entity.id)) || entity); showConversationView(); });
@@ -479,13 +490,40 @@ function renderKanban() {
       const previousStage = entity.attendance_stage || "new"; entity.attendance_stage = stage; renderKanban();
       try {
         const path = payload.kind === "group" ? `/api/groups?id=${encodeURIComponent(payload.id)}` : `/api/contacts?id=${encodeURIComponent(payload.id)}`;
-        const updated = await call(path, { method: "PATCH", body: JSON.stringify({ attendance_stage: stage, ...(payload.kind === "group" ? { priority: entity.priority || "normal" } : {}) }) }); Object.assign(entity, updated);
+				const updated = await call(path, { method: "PATCH", body: JSON.stringify({ attendance_stage: stage, ...(payload.kind === "group" ? { priority: entity.priority || "normal", lawyer_id: entity.lawyer_id || 0, archived: false } : {}) }) }); Object.assign(entity, updated);
       } catch (error) { entity.attendance_stage = previousStage; showContactResult(`Não foi possível mover: ${error.message}`, true); }
       renderKanban(); renderContacts();
     });
     container.append(column);
   }
 }
+
+async function loadLawyers() {
+	const data=await call("/api/contacts?resource=lawyers"); allLawyers=data.lawyers||[];
+	for(const id of ["contactLawyer","groupLawyer"]){const select=document.querySelector(`#${id}`);const current=select.value;select.replaceChildren(new Option("Sem advogado","0"),...allLawyers.map(item=>new Option(item.name,String(item.id))));select.value=current||"0";}
+	renderLawyerEditor(); if(!document.querySelector("#lawyerBoard").classList.contains("hidden"))renderLawyerBoard();
+}
+
+function renderLawyerBoard(){
+	const container=document.querySelector("#lawyerColumns");container.replaceChildren();
+	const columns=[{id:0,name:"Sem advogado",color:"#8a9890"},...allLawyers];
+	for(const lawyer of columns){
+		const column=document.createElement("section");column.className="lawyer-column";column.style.setProperty("--lawyer-color",lawyer.color);
+		const entities=[...allContacts.filter(item=>Number(item.lawyer_id||0)===Number(lawyer.id)).map(item=>({...item,entity_kind:"contact"})),...allGroups.filter(item=>Number(item.lawyer_id||0)===Number(lawyer.id)).map(item=>({...item,entity_kind:"group"}))];
+		const heading=document.createElement("div");heading.className="lawyer-column-heading";heading.innerHTML=`<strong>${lawyer.name}</strong><span>${entities.length}</span>`;column.append(heading);
+		const cards=document.createElement("div");cards.className="lawyer-card-list";
+		for(const entity of entities){const card=document.createElement("article");card.className="lawyer-card";card.draggable=true;card.dataset.kind=entity.entity_kind;card.dataset.id=entity.entity_kind==="group"?entity.id:String(entity.id);
+			const check=document.createElement("input");check.type="checkbox";check.checked=true;check.title="Desmarcar para arquivar";check.addEventListener("change",()=>entity.entity_kind==="group"?archiveGroup(entity):archiveContactCard(entity));
+			const body=document.createElement("div");const name=document.createElement("strong");name.textContent=entity.entity_kind==="group"?entity.name:contactDisplayName(entity);const meta=document.createElement("small");meta.textContent=entity.entity_kind==="group"?`Grupo · ${entity.participant_count} participantes`:formatPhone(entity.phone);body.append(name,meta);card.append(check,body);
+			card.addEventListener("dragstart",event=>event.dataTransfer.setData("application/x-blank-lawyer",JSON.stringify({kind:card.dataset.kind,id:card.dataset.id})));card.addEventListener("click",event=>{if(event.target===check)return;entity.entity_kind==="group"?openGroup(entity):openContact(entity);showConversationView();});cards.append(card);}
+		column.append(cards);column.addEventListener("dragover",event=>{event.preventDefault();column.classList.add("drag-over")});column.addEventListener("dragleave",()=>column.classList.remove("drag-over"));column.addEventListener("drop",async event=>{event.preventDefault();column.classList.remove("drag-over");let data;try{data=JSON.parse(event.dataTransfer.getData("application/x-blank-lawyer"))}catch{return}const entity=data.kind==="group"?allGroups.find(x=>x.id===data.id):allContacts.find(x=>String(x.id)===String(data.id));if(!entity)return;const previous=entity.lawyer_id||0;entity.lawyer_id=Number(lawyer.id);entity.lawyer_name=lawyer.id?lawyer.name:"";entity.lawyer_color=lawyer.id?lawyer.color:"";renderLawyerBoard();try{const path=data.kind==="group"?`/api/groups?id=${encodeURIComponent(data.id)}`:`/api/contacts?id=${encodeURIComponent(data.id)}`;const payload=data.kind==="group"?{attendance_stage:entity.attendance_stage||"new",priority:entity.priority||"normal",lawyer_id:Number(lawyer.id),archived:false}:{lawyer_id:Number(lawyer.id)};Object.assign(entity,await call(path,{method:"PATCH",body:JSON.stringify(payload)}));renderContacts();renderGroups();}catch(error){entity.lawyer_id=previous;showContactResult(`Não foi possível vincular: ${error.message}`,true);renderLawyerBoard();}});container.append(column);
+	}
+}
+
+function showLawyerView(){contactsCard.classList.add("hidden");contactsCard.style.display="none";kanbanBoard.classList.add("hidden");kanbanBoard.style.display="none";const board=document.querySelector("#lawyerBoard");board.classList.remove("hidden");document.querySelector("#conversationViewButton").classList.remove("active");document.querySelector("#boardViewButton").classList.remove("active");document.querySelector("#lawyerViewButton").classList.add("active");renderLawyerBoard();}
+
+function renderLawyerEditor(){const list=document.querySelector("#lawyerEditorList");list.replaceChildren();for(const lawyer of allLawyers){const item=document.createElement("button");item.type="button";item.className="stage-editor-item";const swatch=document.createElement("span");swatch.style.background=lawyer.color;const label=document.createElement("strong");label.textContent=lawyer.name;const edit=document.createElement("small");edit.textContent="Editar";item.append(swatch,label,edit);item.addEventListener("click",()=>{document.querySelector("#lawyerEditId").value=lawyer.id;document.querySelector("#lawyerName").value=lawyer.name;document.querySelector("#lawyerColor").value=lawyer.color});list.append(item)}}
+function resetLawyerForm(){document.querySelector("#lawyerEditId").value="";document.querySelector("#lawyerName").value="";document.querySelector("#lawyerColor").value="#177447";}
 
 async function loadStages() {
   const data = await call("/api/contacts?resource=stages");
@@ -518,12 +556,14 @@ function showConversationView() {
   kanbanBoard.classList.add("hidden"); kanbanBoard.style.display = "none"; kanbanBoard.setAttribute("aria-hidden", "true");
   contactsCard.classList.remove("hidden"); contactsCard.style.display = "grid"; contactsCard.setAttribute("aria-hidden", "false");
   document.querySelector("#conversationViewButton").classList.add("active"); document.querySelector("#boardViewButton").classList.remove("active");
+	document.querySelector("#lawyerBoard").classList.add("hidden"); document.querySelector("#lawyerViewButton").classList.remove("active");
 }
 
 function showBoardView() {
   contactsCard.classList.add("hidden"); contactsCard.style.display = "none"; contactsCard.setAttribute("aria-hidden", "true");
   kanbanBoard.classList.remove("hidden"); kanbanBoard.style.display = "flex"; kanbanBoard.setAttribute("aria-hidden", "false"); renderKanban();
   document.querySelector("#boardViewButton").classList.add("active"); document.querySelector("#conversationViewButton").classList.remove("active");
+	document.querySelector("#lawyerBoard").classList.add("hidden"); document.querySelector("#lawyerViewButton").classList.remove("active");
 }
 
 function renderExtraFields(extra = {}) {
@@ -583,6 +623,7 @@ function openContact(contact = null) {
   document.querySelector("#contactStatus").value = contact?.status || "active";
 	document.querySelector("#contactStage").value = contact ? (contact.attendance_stage || "") : "new";
 	document.querySelector("#contactPriority").value = contact?.priority || "normal";
+	document.querySelector("#contactLawyer").value=String(contact?.lawyer_id||0);
   document.querySelector("#contactResponsible").value = contact?.responsible || "";
   document.querySelector("#contactTags").value = (contact?.tags || []).join(", ");
   document.querySelector("#contactNotes").value = contact?.notes || "";
@@ -622,11 +663,11 @@ function renderContacts() {
 		if (String(activeContact?.id || "") === String(contact.id)) button.setAttribute("aria-current", "true");
 		const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
 		const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${formatPhone(contact.phone)} · ${contact.contact_type || "lead"} · ${contact.status || "active"}`;
-		button.append(name, detail);
+		button.append(name, detail); if(contact.lawyer_name)button.append(createLawyerTag(contact));
 		const workflow = document.createElement("small"); workflow.className = `contact-workflow priority-${contact.priority || "normal"}`; workflow.style.borderLeftColor = stage?.[2] || "#9aa8a0"; workflow.textContent = `${stage?.[1] || "Sem etapa"} · ${priorityLabels[contact.priority || "normal"]}`; button.append(workflow);
 		const extraEntries = Object.entries(contact.extra || {}).slice(0, 2);
 		if (extraEntries.length) { const extra = document.createElement("small"); extra.className = "contact-extra-preview"; extra.textContent = extraEntries.map(([key, value]) => `${key}: ${value}`).join(" · "); button.append(extra); }
-		button.addEventListener("click", () => openContact(contact)); contactList.append(button);
+		button.addEventListener("click", () => openContact(contact)); const wrapper=document.createElement("div");wrapper.className="selectable-card";const check=document.createElement("input");check.type="checkbox";check.checked=true;check.title="Desmarcar para arquivar";check.addEventListener("change",()=>archiveContactCard(contact));wrapper.append(check,button);contactList.append(wrapper);
 	}
 }
 
@@ -637,6 +678,7 @@ async function loadContacts(query = "", silent = false) {
 		if (activeContact) activeContact = allContacts.find((item) => String(item.id) === String(activeContact.id)) || activeContact;
 		renderContacts();
 		if (!kanbanBoard.classList.contains("hidden")) renderKanban();
+		if (!document.querySelector("#lawyerBoard").classList.contains("hidden")) renderLawyerBoard();
   } catch (error) {
 		if (silent) return;
     contactList.innerHTML = '<p class="muted">Não foi possível carregar os contatos.</p>';
@@ -652,7 +694,7 @@ accessForm.addEventListener("submit", async (event) => {
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
-  await Promise.all([loadGroups(), loadContacts()]);
+	await loadLawyers(); await Promise.all([loadGroups(), loadContacts()]);
 	startLiveRefresh();
 });
 
@@ -674,7 +716,7 @@ document.querySelector("#kanbanStatusFilter").addEventListener("change", renderK
 document.querySelector("#kanbanEntityFilter").addEventListener("change", renderKanban);
 document.querySelector("#saveGroupClassification").addEventListener("click", async () => {
   if(!activeGroup)return; const stage=document.querySelector("#groupStage").value; const priority=document.querySelector("#groupPriority").value;
-  try { const updated=await call(`/api/groups?id=${encodeURIComponent(activeGroup.id)}`,{method:"PATCH",body:JSON.stringify({attendance_stage:stage,priority})}); Object.assign(activeGroup,updated); const stored=allGroups.find((item)=>item.id===activeGroup.id); if(stored)Object.assign(stored,updated); renderGroups(); showContactResult("Classificação do grupo salva."); }
+	const lawyer_id=Number(document.querySelector("#groupLawyer").value||0); try { const updated=await call(`/api/groups?id=${encodeURIComponent(activeGroup.id)}`,{method:"PATCH",body:JSON.stringify({attendance_stage:stage,priority,lawyer_id,archived:false})}); Object.assign(activeGroup,updated,allLawyers.find(item=>Number(item.id)===lawyer_id)?{lawyer_name:allLawyers.find(item=>Number(item.id)===lawyer_id).name,lawyer_color:allLawyers.find(item=>Number(item.id)===lawyer_id).color}:{lawyer_name:"",lawyer_color:""}); const stored=allGroups.find((item)=>item.id===activeGroup.id); if(stored)Object.assign(stored,activeGroup); renderGroups(); renderLawyerBoard(); showContactResult("Classificação do grupo salva."); }
   catch(error){showContactResult(`Não foi possível salvar: ${error.message}`,true);}
 });
 document.querySelector("#groupSearch").addEventListener("input", renderGroups);
@@ -695,6 +737,11 @@ document.querySelector("#toggleDetailRail").addEventListener("click", () => { do
 document.querySelector("#showDetailRail").addEventListener("click", () => { document.querySelector("#detailRail").classList.remove("collapsed"); contactsCard.classList.remove("right-collapsed"); });
 document.querySelector("#conversationViewButton").addEventListener("click", showConversationView);
 document.querySelector("#boardViewButton").addEventListener("click", showBoardView);
+document.querySelector("#lawyerViewButton").addEventListener("click", showLawyerView);
+document.querySelector("#manageLawyersButton").addEventListener("click",()=>document.querySelector("#lawyerModal").classList.remove("hidden"));
+document.querySelector("#closeLawyerModal").addEventListener("click",()=>document.querySelector("#lawyerModal").classList.add("hidden"));
+document.querySelector("#cancelLawyerEdit").addEventListener("click",resetLawyerForm);
+document.querySelector("#lawyerForm").addEventListener("submit",async event=>{event.preventDefault();const id=document.querySelector("#lawyerEditId").value;const body={name:document.querySelector("#lawyerName").value.trim(),color:document.querySelector("#lawyerColor").value};const result=document.querySelector("#lawyerResult");try{await call(`/api/contacts?resource=lawyers${id?`&id=${id}`:""}`,{method:id?"PATCH":"POST",body:JSON.stringify(body)});await loadLawyers();resetLawyerForm();result.textContent="Advogado salvo com sucesso.";result.className="result";}catch(error){result.textContent=`Não foi possível salvar: ${error.message}`;result.className="result error";}});
 document.querySelector("#manageStagesButton").addEventListener("click", () => document.querySelector("#stageModal").classList.remove("hidden"));
 document.querySelector("#closeStageModal").addEventListener("click", () => document.querySelector("#stageModal").classList.add("hidden"));
 document.querySelector("#cancelStageEdit").addEventListener("click", resetStageForm);
@@ -796,6 +843,7 @@ contactForm.addEventListener("submit", async (event) => {
       status: document.querySelector("#contactStatus").value,
       attendance_stage: document.querySelector("#contactStage").value,
       priority: document.querySelector("#contactPriority").value,
+		lawyer_id: Number(document.querySelector("#contactLawyer").value || 0),
       responsible: document.querySelector("#contactResponsible").value.trim(),
       tags: document.querySelector("#contactTags").value.split(",").map((tag) => tag.trim()).filter(Boolean),
       notes: document.querySelector("#contactNotes").value,
