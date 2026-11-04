@@ -202,6 +202,8 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .kanban-workspace.hidden { display: none; }
 .kanban-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 13px 16px; background: #fff; border-bottom: 1px solid #dce6df; }
 .kanban-toolbar h2 { margin: 0; font-size: 18px; }
+.kanban-toolbar-actions { display: flex; align-items: center; gap: 10px; }
+.kanban-toolbar-actions button { padding: 8px 11px; font-size: 10px; }
 .priority-legend { display: flex; gap: 6px; flex-wrap: wrap; }
 .priority-legend span, .kanban-priority { padding: 3px 7px; border-radius: 999px; font-size: 9px; font-weight: 800; }
 .priority-urgent { background: #ffe0df; color: #a9211c; }
@@ -209,7 +211,7 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .priority-normal { background: #dff0ff; color: #155e94; }
 .priority-low { background: #e7eee9; color: #596a60; }
 .kanban-columns { flex: 1; min-height: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: 10px; padding: 12px; overflow: auto; align-items: start; }
-.kanban-column { max-height: 100%; display: flex; flex-direction: column; padding: 8px; border-radius: 12px; background: #f3f6f4cc; border: 2px solid transparent; transition: .15s; }
+.kanban-column { max-height: 100%; display: flex; flex-direction: column; padding: 8px; border-radius: 12px; background: #f3f6f4cc; border: 2px solid transparent; border-top: 5px solid var(--stage-color, #3f9cd0); transition: .15s; }
 .kanban-column.drag-over { border-color: #16834b; background: #e3f3e9; }
 .kanban-column-heading { display: flex; justify-content: space-between; align-items: center; padding: 4px 5px 10px; }
 .kanban-column-heading span { min-width: 23px; padding: 3px 6px; border-radius: 999px; text-align: center; background: #dfe8e2; font-size: 10px; }
@@ -230,5 +232,19 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .contact-workflow.priority-high { border-left-color: #e47b21; color: #9a4b00; }
 .contact-workflow.priority-low { border-left-color: #91a39a; }
 @media (max-width: 720px) { .header-actions { align-items: flex-end; flex-direction: column-reverse; } .view-switch button { padding: 6px 9px; } .kanban-workspace { border-radius: 0; } .kanban-columns { grid-auto-columns: minmax(250px, 82vw); } }
+
+.stage-modal { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 18px; background: #10251a88; backdrop-filter: blur(3px); }
+.stage-modal.hidden { display: none; }
+.stage-modal-card { width: min(520px, 100%); max-height: min(720px, 90vh); overflow: auto; padding: 18px; border-radius: 16px; background: #fff; box-shadow: 0 24px 80px #10251a55; }
+.stage-modal-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.stage-modal-heading h2 { margin: 0; font-size: 19px; }
+.stage-editor-list { display: grid; gap: 6px; margin-bottom: 18px; }
+.stage-editor-item { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 9px; padding: 9px 11px; text-align: left; background: #f2f6f3; color: #20352b; }
+.stage-editor-item span { width: 18px; height: 18px; border-radius: 5px; }
+.stage-editor-item small { color: #64756b; }
+.stage-modal-card label { margin-bottom: 12px; }
+.stage-modal-card input { padding: 10px; }
+.stage-modal-card input[type="color"] { height: 44px; padding: 4px; }
+.stage-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
 

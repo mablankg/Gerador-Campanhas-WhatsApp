@@ -151,7 +151,7 @@ async function unlock() {
   composer.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
   viewSwitch.classList.remove("hidden");
-  await Promise.all([loadGroups(), loadContacts()]);
+  await Promise.all([loadGroups(), loadStages(), loadContacts()]);
 	await pollMessageEvents();
 	startLiveRefresh();
 }
@@ -341,9 +341,9 @@ function contactDisplayName(contact) {
   return contact?.nickname ? `${name} (${contact.nickname})` : name;
 }
 
-const attendanceStages = [
-  ["new", "Novos"], ["in_progress", "Em atendimento"], ["waiting_client", "Aguardando cliente"],
-  ["waiting_action", "Aguardando providência"], ["finished", "Finalizados"],
+let attendanceStages = [
+  ["new", "Novos", "#3f9cd0"], ["in_progress", "Em atendimento", "#8b6fd6"], ["waiting_client", "Aguardando cliente", "#e2a51b"],
+  ["waiting_action", "Aguardando providência", "#e47b21"], ["finished", "Finalizados", "#5d9b75"],
 ];
 const priorityLabels = { urgent: "Urgente", high: "Alta", normal: "Normal", low: "Baixa" };
 const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
@@ -351,8 +351,9 @@ const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
 function renderKanban() {
   const container = document.querySelector("#kanbanColumns");
   container.replaceChildren();
-  for (const [stage, label] of attendanceStages) {
+  for (const [stage, label, color] of attendanceStages) {
     const column = document.createElement("section"); column.className = "kanban-column"; column.dataset.stage = stage;
+    column.style.setProperty("--stage-color", color);
     const contacts = allContacts.filter((item) => (item.attendance_stage || "new") === stage)
       .sort((a, b) => (priorityOrder[a.priority || "normal"] - priorityOrder[b.priority || "normal"]) || contactDisplayName(a).localeCompare(contactDisplayName(b), "pt-BR"));
     const heading = document.createElement("div"); heading.className = "kanban-column-heading";
@@ -385,6 +386,29 @@ function renderKanban() {
     container.append(column);
   }
 }
+
+async function loadStages() {
+  const data = await call("/api/contacts?resource=stages");
+  attendanceStages = (data.stages || []).map((item) => [item.id, item.name, item.color]);
+  const select = document.querySelector("#contactStage"); const current = select.value;
+  select.replaceChildren(...attendanceStages.map(([id, name]) => new Option(name, id)));
+  if (attendanceStages.some(([id]) => id === current)) select.value = current;
+  renderStageEditor();
+}
+
+function renderStageEditor() {
+  const list = document.querySelector("#stageEditorList"); list.replaceChildren();
+  for (const [id, name, color] of attendanceStages) {
+    const item = document.createElement("button"); item.type = "button"; item.className = "stage-editor-item";
+    const swatch = document.createElement("span"); swatch.style.background = color;
+    const label = document.createElement("strong"); label.textContent = name;
+    const edit = document.createElement("small"); edit.textContent = "Editar"; item.append(swatch, label, edit);
+    item.addEventListener("click", () => { document.querySelector("#stageEditId").value=id; document.querySelector("#stageName").value=name; document.querySelector("#stageColor").value=color; });
+    list.append(item);
+  }
+}
+
+function resetStageForm() { document.querySelector("#stageEditId").value=""; document.querySelector("#stageName").value=""; document.querySelector("#stageColor").value="#3f9cd0"; }
 
 function showConversationView() {
   kanbanBoard.classList.add("hidden"); kanbanBoard.style.display = "none"; kanbanBoard.setAttribute("aria-hidden", "true");
@@ -549,6 +573,17 @@ document.querySelector("#toggleDetailRail").addEventListener("click", () => { do
 document.querySelector("#showDetailRail").addEventListener("click", () => { document.querySelector("#detailRail").classList.remove("collapsed"); contactsCard.classList.remove("right-collapsed"); });
 document.querySelector("#conversationViewButton").addEventListener("click", showConversationView);
 document.querySelector("#boardViewButton").addEventListener("click", showBoardView);
+document.querySelector("#manageStagesButton").addEventListener("click", () => document.querySelector("#stageModal").classList.remove("hidden"));
+document.querySelector("#closeStageModal").addEventListener("click", () => document.querySelector("#stageModal").classList.add("hidden"));
+document.querySelector("#cancelStageEdit").addEventListener("click", resetStageForm);
+document.querySelector("#stageForm").addEventListener("submit", async (event) => {
+  event.preventDefault(); const id=document.querySelector("#stageEditId").value; const result=document.querySelector("#stageResult");
+  try {
+    const path=id?`/api/contacts?resource=stages&stage_id=${encodeURIComponent(id)}`:"/api/contacts?resource=stages";
+    await call(path,{method:id?"PATCH":"POST",body:JSON.stringify({name:document.querySelector("#stageName").value.trim(),color:document.querySelector("#stageColor").value})});
+    await loadStages(); resetStageForm(); renderKanban(); result.textContent="Etapa salva com sucesso."; result.className="result";
+  } catch(error) { result.textContent=`Não foi possível salvar a etapa: ${error.message}`; result.className="result error"; }
+});
 
 function enablePanelResize(handle, side) {
   handle.addEventListener("pointerdown", (event) => {
