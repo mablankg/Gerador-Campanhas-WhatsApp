@@ -183,7 +183,7 @@ function startLiveRefresh() {
       await pollMessageEvents();
       if (activeContact) await loadContactMessages(activeContact, true);
       else if (activeGroup) await loadGroupMessages(activeGroup, true);
-      if (liveRefreshCycle % 3 === 0) await loadContacts(document.querySelector("#contactSearch").value.trim(), true);
+      if (liveRefreshCycle % 3 === 0) await loadContacts((kanbanBoard.classList.contains("hidden") ? document.querySelector("#contactSearch") : document.querySelector("#kanbanSearch")).value.trim(), true);
       if (liveRefreshCycle % 6 === 0) await status();
     } finally {
       liveRefreshBusy = false;
@@ -350,11 +350,16 @@ const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
 
 function renderKanban() {
   const container = document.querySelector("#kanbanColumns");
+  const query = document.querySelector("#kanbanSearch").value.trim().toLocaleLowerCase("pt-BR");
+  const typeFilter = document.querySelector("#kanbanTypeFilter").value;
+  const statusFilter = document.querySelector("#kanbanStatusFilter").value;
   container.replaceChildren();
   for (const [stage, label, color] of attendanceStages) {
     const column = document.createElement("section"); column.className = "kanban-column"; column.dataset.stage = stage;
     column.style.setProperty("--stage-color", color);
     const contacts = allContacts.filter((item) => (item.attendance_stage || "new") === stage)
+      .filter((item) => !query || contactDisplayName(item).toLocaleLowerCase("pt-BR").includes(query) || String(item.phone).includes(query))
+      .filter((item) => (!typeFilter || item.contact_type === typeFilter) && (!statusFilter || item.status === statusFilter))
       .sort((a, b) => (priorityOrder[a.priority || "normal"] - priorityOrder[b.priority || "normal"]) || contactDisplayName(a).localeCompare(contactDisplayName(b), "pt-BR"));
     const heading = document.createElement("div"); heading.className = "kanban-column-heading";
     const title = document.createElement("strong"); title.textContent = label;
@@ -558,6 +563,13 @@ document.querySelector("#contactSearch").addEventListener("input", (event) => {
 });
 document.querySelector("#contactTypeFilter").addEventListener("change", renderContacts);
 document.querySelector("#contactStatusFilter").addEventListener("change", renderContacts);
+let kanbanSearchTimer;
+document.querySelector("#kanbanSearch").addEventListener("input", (event) => {
+  clearTimeout(kanbanSearchTimer);
+  kanbanSearchTimer = setTimeout(async () => { await loadContacts(event.target.value.trim(), true); renderKanban(); }, 250);
+});
+document.querySelector("#kanbanTypeFilter").addEventListener("change", renderKanban);
+document.querySelector("#kanbanStatusFilter").addEventListener("change", renderKanban);
 document.querySelector("#groupSearch").addEventListener("input", renderGroups);
 
 function switchCRMMode(mode){

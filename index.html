@@ -97,6 +97,7 @@
 
       <section class="kanban-workspace hidden" id="kanbanBoard">
         <div class="kanban-toolbar"><div><p class="eyebrow">CRM</p><h2>Etapas de atendimento</h2></div><div class="kanban-toolbar-actions"><div class="priority-legend"><span class="priority-urgent">Urgente</span><span class="priority-high">Alta</span><span class="priority-normal">Normal</span><span class="priority-low">Baixa</span></div><button class="secondary" id="manageStagesButton" type="button">Gerenciar etapas</button></div></div>
+        <div class="kanban-filters"><input id="kanbanSearch" type="search" placeholder="Nome, apelido ou telefone" /><select id="kanbanTypeFilter"><option value="">Todos os tipos</option><option value="lead">Lead</option><option value="client">Cliente</option><option value="partner">Parceiro</option><option value="other">Outro</option></select><select id="kanbanStatusFilter"><option value="">Todos os status</option><option value="active">Ativo</option><option value="waiting">Aguardando</option><option value="finished">Finalizado</option></select></div>
         <div class="kanban-columns" id="kanbanColumns"></div>
       </section>
 
