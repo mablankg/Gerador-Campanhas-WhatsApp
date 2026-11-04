@@ -22,6 +22,9 @@ let allContacts = [];
 let activeContact = null;
 let allGroups = [];
 let activeGroup = null;
+let liveRefreshTimer = null;
+let liveRefreshBusy = false;
+let liveRefreshCycle = 0;
 accessTokenInput.value = accessToken;
 
 togglePassword.addEventListener("click", () => {
@@ -74,6 +77,24 @@ async function unlock() {
   composer.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
   await Promise.all([loadGroups(), loadContacts()]);
+	startLiveRefresh();
+}
+
+function startLiveRefresh() {
+  if (liveRefreshTimer) return;
+  liveRefreshTimer = setInterval(async () => {
+    if (document.hidden || liveRefreshBusy || !accessToken) return;
+    liveRefreshBusy = true;
+    liveRefreshCycle += 1;
+    try {
+      if (activeContact) await loadContactMessages(activeContact, true);
+      else if (activeGroup) await loadGroupMessages(activeGroup, true);
+      if (liveRefreshCycle % 3 === 0) await loadContacts(document.querySelector("#contactSearch").value.trim(), true);
+      if (liveRefreshCycle % 6 === 0) await status();
+    } finally {
+      liveRefreshBusy = false;
+    }
+  }, 5000);
 }
 
 async function poll(id) {
@@ -112,15 +133,15 @@ function renderGroups() {
   list.replaceChildren();
   if (!groups.length) { list.innerHTML = '<p class="muted">Nenhum grupo encontrado.</p>'; return; }
   for (const group of groups) {
-    const button = document.createElement("button"); button.type = "button"; button.className = "contact-item"; button.dataset.id = group.id;
+    const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${activeGroup?.id===group.id?" active":""}`; button.dataset.id = group.id;
     const name = document.createElement("strong"); name.textContent = group.name;
     const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${group.participant_count} participantes${group.is_announce ? " · somente administradores" : ""}`;
     button.append(name, detail); button.addEventListener("click", () => openGroup(group)); list.append(button);
   }
 }
 
-async function loadGroupMessages(group) {
-  const thread = document.querySelector("#messageThread"); thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
+async function loadGroupMessages(group, silent = false) {
+  const thread = document.querySelector("#messageThread"); if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
     const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`); thread.replaceChildren();
     if (!data.messages?.length) { thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este grupo.</div>'; return; }
@@ -131,7 +152,7 @@ async function loadGroupMessages(group) {
       bubble.append(body,time); thread.append(bubble);
     }
     thread.scrollTop=thread.scrollHeight;
-  } catch(error){ thread.innerHTML=`<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`; }
+  } catch(error){ if (!silent) thread.innerHTML=`<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`; }
 }
 
 function openGroup(group) {
@@ -245,9 +266,9 @@ function collectExtraFields() {
   return extra;
 }
 
-async function loadContactMessages(contact) {
+async function loadContactMessages(contact, silent = false) {
   const thread = document.querySelector("#messageThread");
-  thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
+	if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
     const data = await call(`/api/contact-messages?id=${encodeURIComponent(contact.id)}`);
     thread.replaceChildren();
@@ -263,7 +284,7 @@ async function loadContactMessages(contact) {
     }
     thread.scrollTop = thread.scrollHeight;
   } catch (error) {
-    thread.innerHTML = `<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`;
+	if (!silent) thread.innerHTML = `<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`;
   }
 }
 
@@ -312,7 +333,7 @@ function renderContacts() {
 	contactList.replaceChildren();
 	if (!contacts.length) { contactList.innerHTML = '<p class="muted">Nenhum contato encontrado.</p>'; return; }
 	for (const contact of contacts) {
-		const button = document.createElement("button"); button.type = "button"; button.className = "contact-item"; button.dataset.id = contact.id;
+		const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${String(activeContact?.id||"")===String(contact.id)?" active":""}`; button.dataset.id = contact.id;
 		const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
 		const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${formatPhone(contact.phone)} · ${contact.contact_type || "lead"} · ${contact.status || "active"}`;
 		button.append(name, detail);
@@ -322,12 +343,14 @@ function renderContacts() {
 	}
 }
 
-async function loadContacts(query = "") {
+async function loadContacts(query = "", silent = false) {
   try {
     const data = await call(`/api/contacts${query ? `?q=${encodeURIComponent(query)}` : ""}`);
 		allContacts = data.contacts || [];
+		if (activeContact) activeContact = allContacts.find((item) => String(item.id) === String(activeContact.id)) || activeContact;
 		renderContacts();
   } catch (error) {
+		if (silent) return;
     contactList.innerHTML = '<p class="muted">Não foi possível carregar os contatos.</p>';
     showContactResult(`Falha ao carregar contatos: ${error.message}`, true);
   }
@@ -342,6 +365,7 @@ accessForm.addEventListener("submit", async (event) => {
   composer.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
   await Promise.all([loadGroups(), loadContacts()]);
+	startLiveRefresh();
 });
 
 let contactSearchTimer;
