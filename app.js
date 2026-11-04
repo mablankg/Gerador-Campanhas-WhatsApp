@@ -224,6 +224,7 @@ async function loadGroups() {
     groupSelect.add(new Option("Selecione um grupo", ""));
     for (const group of data.groups) groupSelect.add(new Option(`${group.name} (${group.participant_count})`, group.id));
     renderGroups();
+    if (!kanbanBoard.classList.contains("hidden")) renderKanban();
   } catch (error) {
     groupSelect.replaceChildren(new Option("Não foi possível carregar", ""));
     showGroupResult(`Falha ao carregar grupos: ${error.message}`, true);
@@ -240,10 +241,12 @@ function renderGroups() {
   if (!groups.length) { list.innerHTML = '<p class="muted">Nenhum grupo encontrado.</p>'; return; }
   for (const group of groups) {
     const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${activeGroup?.id===group.id?" active":""}${unreadGroups.has(group.id)?" incoming":""}`; button.dataset.id = group.id;
+    const stage = attendanceStages.find(([key]) => key === (group.attendance_stage || "new")); button.style.setProperty("--stage-color", stage?.[2] || "#3f9cd0");
     if (activeGroup?.id === group.id) button.setAttribute("aria-current", "true");
     const name = document.createElement("strong"); name.textContent = group.name;
     const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${group.participant_count} participantes${group.is_announce ? " · somente administradores" : ""}`;
-    button.append(name, detail); button.addEventListener("click", () => openGroup(group)); list.append(button);
+    const workflow=document.createElement("small"); workflow.className=`contact-workflow priority-${group.priority||"normal"}`; workflow.style.borderLeftColor=stage?.[2]||"#3f9cd0"; workflow.textContent=`${stage?.[1]||"Novo"} · ${priorityLabels[group.priority||"normal"]}`;
+    button.append(name, detail, workflow); button.addEventListener("click", () => openGroup(group)); list.append(button);
   }
 }
 
@@ -267,6 +270,7 @@ function openGroup(group) {
   document.querySelector("#groupDetailName").textContent=group.name; document.querySelector("#groupDetailNameField").value=group.name;
   document.querySelector("#groupParticipantCount").value=group.participant_count; document.querySelector("#groupTopic").value=group.topic||"";
   document.querySelector("#groupAnnounce").value=group.is_announce?"Somente administradores":"Todos podem enviar";
+  document.querySelector("#groupStage").value=group.attendance_stage||"new"; document.querySelector("#groupPriority").value=group.priority||"normal";
   document.querySelector("#groupUpdatedAt").textContent=`Atualizado em ${new Date(group.updated_at).toLocaleString("pt-BR")}`;
   document.querySelector("#to").value=group.id; message.disabled=false; sendButton.disabled=false;
   document.querySelectorAll(".detail-tabs button").forEach((item,index)=>item.classList.toggle("active",index===0));
@@ -361,42 +365,52 @@ const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
 function renderKanban() {
   const container = document.querySelector("#kanbanColumns");
   const query = document.querySelector("#kanbanSearch").value.trim().toLocaleLowerCase("pt-BR");
+  const entityFilter = document.querySelector("#kanbanEntityFilter").value;
   const typeFilter = document.querySelector("#kanbanTypeFilter").value;
   const statusFilter = document.querySelector("#kanbanStatusFilter").value;
   container.replaceChildren();
   for (const [stage, label, color] of attendanceStages) {
     const column = document.createElement("section"); column.className = "kanban-column"; column.dataset.stage = stage;
     column.style.setProperty("--stage-color", color);
-    const contacts = allContacts.filter((item) => (item.attendance_stage || "new") === stage)
+    const contacts = entityFilter === "group" ? [] : allContacts.filter((item) => (item.attendance_stage || "new") === stage)
       .filter((item) => !query || contactDisplayName(item).toLocaleLowerCase("pt-BR").includes(query) || String(item.phone).includes(query))
       .filter((item) => (!typeFilter || item.contact_type === typeFilter) && (!statusFilter || item.status === statusFilter))
-      .sort((a, b) => (priorityOrder[a.priority || "normal"] - priorityOrder[b.priority || "normal"]) || contactDisplayName(a).localeCompare(contactDisplayName(b), "pt-BR"));
+      .map((item) => ({ ...item, entity_kind: "contact" }));
+    const groups = entityFilter === "contact" || typeFilter || statusFilter ? [] : allGroups.filter((item) => (item.attendance_stage || "new") === stage)
+      .filter((item) => !query || item.name.toLocaleLowerCase("pt-BR").includes(query))
+      .map((item) => ({ ...item, entity_kind: "group" }));
+    const entities = [...contacts, ...groups].sort((a, b) => (priorityOrder[a.priority || "normal"] - priorityOrder[b.priority || "normal"]) || (a.name || "").localeCompare(b.name || "", "pt-BR"));
     const heading = document.createElement("div"); heading.className = "kanban-column-heading";
     const title = document.createElement("strong"); title.textContent = label;
-    const count = document.createElement("span"); count.textContent = contacts.length; heading.append(title, count); column.append(heading);
+    const count = document.createElement("span"); count.textContent = entities.length; heading.append(title, count); column.append(heading);
     const cards = document.createElement("div"); cards.className = "kanban-card-list";
-    for (const contact of contacts) {
-      const card = document.createElement("article"); card.className = `kanban-card priority-${contact.priority || "normal"}${unreadContacts.has(String(contact.id)) ? " incoming" : ""}`; card.draggable = true; card.dataset.id = contact.id;
+    for (const entity of entities) {
+      const entityID = entity.entity_kind === "group" ? entity.id : String(entity.id);
+      const unread = entity.entity_kind === "group" ? unreadGroups.has(entity.id) : unreadContacts.has(String(entity.id));
+      const card = document.createElement("article"); card.className = `kanban-card priority-${entity.priority || "normal"}${unread ? " incoming" : ""}`; card.draggable = true; card.dataset.id = entityID; card.dataset.kind = entity.entity_kind;
       card.style.setProperty("--stage-color", color);
-      const priority = document.createElement("span"); priority.className = "kanban-priority"; priority.textContent = priorityLabels[contact.priority || "normal"];
-      const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
-      const phone = document.createElement("small"); phone.textContent = formatPhone(contact.phone);
-      const meta = document.createElement("div"); meta.className = "kanban-meta"; meta.textContent = contact.responsible || contact.contact_type || "Lead";
+      const priority = document.createElement("span"); priority.className = "kanban-priority"; priority.textContent = `${entity.entity_kind === "group" ? "Grupo · " : ""}${priorityLabels[entity.priority || "normal"]}`;
+      const name = document.createElement("strong"); name.textContent = entity.entity_kind === "group" ? entity.name : contactDisplayName(entity);
+      const phone = document.createElement("small"); phone.textContent = entity.entity_kind === "group" ? `${entity.participant_count} participantes` : formatPhone(entity.phone);
+      const meta = document.createElement("div"); meta.className = "kanban-meta"; meta.textContent = entity.entity_kind === "group" ? (entity.is_announce ? "Somente administradores" : "Todos podem enviar") : (entity.responsible || entity.contact_type || "Lead");
       card.append(priority, name, phone, meta);
-      card.addEventListener("dragstart", (event) => { event.dataTransfer.setData("text/contact-id", String(contact.id)); card.classList.add("dragging"); });
+      card.addEventListener("dragstart", (event) => { event.dataTransfer.setData("application/x-blank-entity", JSON.stringify({ id: entityID, kind: entity.entity_kind })); card.classList.add("dragging"); });
       card.addEventListener("dragend", () => card.classList.remove("dragging"));
-      card.addEventListener("click", () => { openContact(contact); showConversationView(); });
+      card.addEventListener("click", () => { if (entity.entity_kind === "group") openGroup(allGroups.find((item) => item.id === entity.id) || entity); else openContact(allContacts.find((item) => String(item.id) === String(entity.id)) || entity); showConversationView(); });
       cards.append(card);
     }
     column.append(cards);
     column.addEventListener("dragover", (event) => { event.preventDefault(); column.classList.add("drag-over"); });
     column.addEventListener("dragleave", () => column.classList.remove("drag-over"));
     column.addEventListener("drop", async (event) => {
-      event.preventDefault(); column.classList.remove("drag-over"); const id = event.dataTransfer.getData("text/contact-id");
-      const contact = allContacts.find((item) => String(item.id) === id); if (!contact || contact.attendance_stage === stage) return;
-      const previousStage = contact.attendance_stage || "new"; contact.attendance_stage = stage; renderKanban();
-      try { const updated = await call(`/api/contacts?id=${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ attendance_stage: stage }) }); Object.assign(contact, updated); }
-      catch (error) { contact.attendance_stage = previousStage; showContactResult(`Não foi possível mover o contato: ${error.message}`, true); }
+      event.preventDefault(); column.classList.remove("drag-over"); let payload; try { payload=JSON.parse(event.dataTransfer.getData("application/x-blank-entity")); } catch { return; }
+      const entity = payload.kind === "group" ? allGroups.find((item) => item.id === payload.id) : allContacts.find((item) => String(item.id) === String(payload.id));
+      if (!entity || entity.attendance_stage === stage) return;
+      const previousStage = entity.attendance_stage || "new"; entity.attendance_stage = stage; renderKanban();
+      try {
+        const path = payload.kind === "group" ? `/api/groups?id=${encodeURIComponent(payload.id)}` : `/api/contacts?id=${encodeURIComponent(payload.id)}`;
+        const updated = await call(path, { method: "PATCH", body: JSON.stringify({ attendance_stage: stage, ...(payload.kind === "group" ? { priority: entity.priority || "normal" } : {}) }) }); Object.assign(entity, updated);
+      } catch (error) { entity.attendance_stage = previousStage; showContactResult(`Não foi possível mover: ${error.message}`, true); }
       renderKanban(); renderContacts();
     });
     container.append(column);
@@ -409,6 +423,8 @@ async function loadStages() {
   const select = document.querySelector("#contactStage"); const current = select.value;
   select.replaceChildren(...attendanceStages.map(([id, name]) => new Option(name, id)));
   if (attendanceStages.some(([id]) => id === current)) select.value = current;
+  const groupStage = document.querySelector("#groupStage"); const groupCurrent=groupStage.value;
+  groupStage.replaceChildren(...attendanceStages.map(([id,name])=>new Option(name,id))); if(attendanceStages.some(([id])=>id===groupCurrent))groupStage.value=groupCurrent;
   renderStageEditor();
 }
 
@@ -580,6 +596,12 @@ document.querySelector("#kanbanSearch").addEventListener("input", (event) => {
 });
 document.querySelector("#kanbanTypeFilter").addEventListener("change", renderKanban);
 document.querySelector("#kanbanStatusFilter").addEventListener("change", renderKanban);
+document.querySelector("#kanbanEntityFilter").addEventListener("change", renderKanban);
+document.querySelector("#saveGroupClassification").addEventListener("click", async () => {
+  if(!activeGroup)return; const stage=document.querySelector("#groupStage").value; const priority=document.querySelector("#groupPriority").value;
+  try { const updated=await call(`/api/groups?id=${encodeURIComponent(activeGroup.id)}`,{method:"PATCH",body:JSON.stringify({attendance_stage:stage,priority})}); Object.assign(activeGroup,updated); const stored=allGroups.find((item)=>item.id===activeGroup.id); if(stored)Object.assign(stored,updated); renderGroups(); showContactResult("Classificação do grupo salva."); }
+  catch(error){showContactResult(`Não foi possível salvar: ${error.message}`,true);}
+});
 document.querySelector("#groupSearch").addEventListener("input", renderGroups);
 
 function switchCRMMode(mode){
