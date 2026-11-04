@@ -20,6 +20,9 @@ const contactResult = document.querySelector("#contactResult");
 const kanbanBoard = document.querySelector("#kanbanBoard");
 const viewSwitch = document.querySelector("#viewSwitch");
 let accessToken = localStorage.getItem("campaign_access") || "";
+let activeAccountID = localStorage.getItem("blank_whatsapp_account") || "primary";
+let whatsappAccounts = [];
+let qrPollTimer = null;
 let allContacts = [];
 let activeContact = null;
 let allGroups = [];
@@ -62,7 +65,7 @@ function showGroupResult(text, error = false) {
 async function call(path, options = {}) {
   const response = await fetch(path, {
     ...options,
-    headers: { "Content-Type": "application/json", "x-app-token": accessToken, ...(options.headers || {}) },
+    headers: { "Content-Type": "application/json", "x-app-token": accessToken, "x-whatsapp-account": activeAccountID, ...(options.headers || {}) },
   });
   const body = await response.json().catch(() => ({ error: "invalid_response" }));
   if (!response.ok) throw Object.assign(new Error(body.error || "request_failed"), { status: response.status });
@@ -155,12 +158,79 @@ async function status() {
   }
 }
 
+async function loadAccounts() {
+  const data = await call("/api/status?accounts=1");
+  whatsappAccounts = data.accounts || [];
+  if (!whatsappAccounts.some((item) => item.id === activeAccountID)) activeAccountID = whatsappAccounts[0]?.id || "primary";
+  const select = document.querySelector("#accountSelect");
+  select.replaceChildren(...whatsappAccounts.map((item) => new Option(`${item.name}${item.phone ? ` · ${formatPhone(item.phone)}` : ""}`, item.id)));
+  select.value = activeAccountID;
+  renderAccountList();
+}
+
+function renderAccountList() {
+  const list = document.querySelector("#accountList");
+  list.replaceChildren();
+  for (const account of whatsappAccounts) {
+    const row = document.createElement("div"); row.className = "account-row";
+    const info = document.createElement("div");
+    const title = document.createElement("strong"); title.textContent = account.name;
+    const detail = document.createElement("small"); detail.textContent = account.phone ? formatPhone(account.phone) : "Número ainda não vinculado";
+    info.append(title, detail);
+    const state = document.createElement("span"); state.className = `account-state ${account.status === "connected" ? "online" : ""}`; state.textContent = account.status === "connected" ? "Conectado" : account.status === "qr" ? "Aguardando QR" : "Desconectado";
+    const action = document.createElement("button"); action.type = "button"; action.className = "secondary";
+    action.textContent = account.status === "connected" ? "Desconectar" : "Conectar";
+    action.addEventListener("click", () => account.status === "connected" ? disconnectAccount(account) : connectAccount(account));
+    row.append(info, state, action); list.append(row);
+  }
+}
+
+async function connectAccount(account) {
+  showAccountResult("Preparando a conexão...");
+  await call("/api/status", { method: "POST", headers: { "x-whatsapp-account": account.id }, body: JSON.stringify({ action: "connect", account: account.id }) });
+  document.querySelector("#qrPanel").classList.remove("hidden");
+  clearInterval(qrPollTimer);
+  const refresh = async () => {
+    try {
+      const accounts = await call("/api/status?accounts=1", { headers: { "x-whatsapp-account": account.id } });
+      whatsappAccounts = accounts.accounts || [];
+      const current = whatsappAccounts.find((item) => item.id === account.id);
+      renderAccountList();
+      if (current?.status === "connected") {
+        clearInterval(qrPollTimer); document.querySelector("#qrPanel").classList.add("hidden"); showAccountResult(`${current.name} conectado com sucesso.`); await loadAccounts(); return;
+      }
+      const qr = await call("/api/status?qr=1", { headers: { "x-whatsapp-account": account.id } });
+      document.querySelector("#accountQR").src = qr.image;
+      showAccountResult("Leia o QR Code com o número que deseja adicionar.");
+    } catch (error) { if (error.status !== 409) showAccountResult(`Conexão: ${error.message}`, true); }
+  };
+  await refresh(); qrPollTimer = setInterval(refresh, 2500);
+}
+
+async function disconnectAccount(account) {
+  await call("/api/status", { method: "POST", headers: { "x-whatsapp-account": account.id }, body: JSON.stringify({ action: "disconnect", account: account.id }) });
+  showAccountResult(`${account.name} será desconectado.`); setTimeout(loadAccounts, 1200);
+}
+
+function showAccountResult(text, error = false) {
+  const box = document.querySelector("#accountResult"); box.textContent = text; box.classList.remove("hidden", "error"); if (error) box.classList.add("error");
+}
+
+async function switchAccount(id) {
+  activeAccountID = id; localStorage.setItem("blank_whatsapp_account", id);
+  activeContact = null; activeGroup = null; allContacts = []; allGroups = []; unreadContacts.clear(); unreadGroups.clear(); messageEventCursor = "latest"; renderedConversationKey = "";
+  document.querySelector("#messageThread").innerHTML = '<div class="empty-conversation">Selecione um contato para visualizar as mensagens.</div>';
+  await status(); await Promise.all([loadGroups(), loadContacts()]);
+}
+
 async function unlock() {
   if (!accessToken || !(await status())) return;
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
   viewSwitch.classList.remove("hidden");
+  document.querySelector("#accountSwitch").classList.remove("hidden");
+  await loadAccounts();
   await Promise.all([loadGroups(), loadStages(), loadContacts()]);
 	await pollMessageEvents();
 	startLiveRefresh();
@@ -819,6 +889,22 @@ document.querySelector("#createGroupForm").addEventListener("submit", async (eve
   } finally {
     button.disabled = false;
   }
+});
+
+document.querySelector("#accountSelect").addEventListener("change", (event) => switchAccount(event.target.value));
+document.querySelector("#manageAccounts").addEventListener("click", async () => {
+  await loadAccounts(); document.querySelector("#accountDialog").showModal();
+});
+document.querySelector("#accountDialog").addEventListener("close", () => { clearInterval(qrPollTimer); document.querySelector("#qrPanel").classList.add("hidden"); });
+document.querySelector("#addAccount").addEventListener("click", async () => {
+  const input = document.querySelector("#newAccountName"); const name = input.value.trim();
+  if (name.length < 2) return showAccountResult("Digite um nome para identificar o novo número.", true);
+  try {
+    const created = await call("/api/status", { method: "POST", body: JSON.stringify({ action: "create", name }) });
+    input.value = ""; await loadAccounts();
+    const account = whatsappAccounts.find((item) => item.id === created.id) || created;
+    await connectAccount(account);
+  } catch (error) { showAccountResult(`Não foi possível adicionar: ${error.message}`, true); }
 });
 
 unlock();

@@ -14,8 +14,10 @@
           <h1>Blank Juridico</h1>
           <p class="sub">Atendimento, contatos e conversas jurídicas pelo WhatsApp.</p>
         </div>
-        <div class="header-actions"><div class="view-switch hidden" id="viewSwitch"><button class="active" id="conversationViewButton" type="button">Conversas</button><button id="boardViewButton" type="button">Quadro</button></div><div class="connection" id="connection"><span></span><b>Verificando...</b></div></div>
+        <div class="header-actions"><div class="account-switch hidden" id="accountSwitch"><select id="accountSelect" aria-label="Número do WhatsApp"></select><button class="secondary" id="manageAccounts" type="button">Números</button></div><div class="view-switch hidden" id="viewSwitch"><button class="active" id="conversationViewButton" type="button">Conversas</button><button id="boardViewButton" type="button">Quadro</button></div><div class="connection" id="connection"><span></span><b>Verificando...</b></div></div>
       </header>
+
+      <dialog class="account-dialog" id="accountDialog"><form method="dialog" class="dialog-card"><div class="dialog-heading"><div><p class="eyebrow">WHATSAPP</p><h2>Gerenciar números</h2></div><button class="icon-button" value="cancel" aria-label="Fechar">×</button></div><div id="accountList" class="account-list"></div><div class="new-account"><input id="newAccountName" maxlength="60" placeholder="Nome da conexão, ex.: Atendimento 2" /><button id="addAccount" type="button">Adicionar número</button></div><div class="qr-panel hidden" id="qrPanel"><h3>Leia o QR Code no novo celular</h3><p>WhatsApp → Aparelhos conectados → Conectar aparelho.</p><img id="accountQR" alt="QR Code para conectar o WhatsApp" /><small>O código é atualizado automaticamente.</small></div><div class="result hidden" id="accountResult"></div></form></dialog>
 
       <section class="card access-card" id="accessCard">
         <h2>Acesso</h2>

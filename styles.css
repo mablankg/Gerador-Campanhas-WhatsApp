@@ -197,6 +197,25 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 
 /* Quadro de etapas */
 .header-actions { display: flex; align-items: center; gap: 10px; }
+.account-switch { display: flex; gap: 6px; align-items: center; }
+.account-switch select { width: auto; min-width: 180px; padding: 8px 30px 8px 10px; background: #fff; }
+.account-switch button { padding: 8px 12px; }
+.account-dialog { border: 0; padding: 0; border-radius: 18px; width: min(650px, calc(100vw - 28px)); box-shadow: 0 24px 80px #15332655; }
+.account-dialog::backdrop { background: #10291f88; backdrop-filter: blur(3px); }
+.dialog-card { padding: 24px; display: grid; gap: 18px; }
+.dialog-heading, .account-row, .new-account { display: flex; align-items: center; gap: 12px; }
+.dialog-heading { justify-content: space-between; }
+.dialog-heading h2 { margin: 2px 0 0; }
+.account-list { display: grid; gap: 8px; }
+.account-row { padding: 12px; border: 1px solid #dbe7df; border-radius: 12px; }
+.account-row > div { display: grid; flex: 1; gap: 3px; }
+.account-row small { color: #718078; }
+.account-state { font-size: 12px; padding: 5px 8px; border-radius: 20px; background: #eef2ef; }
+.account-state.online { background: #dcf6e8; color: #08763e; }
+.new-account input { flex: 1; }
+.qr-panel { text-align: center; padding: 16px; border-radius: 14px; background: #f0f8f3; }
+.qr-panel h3, .qr-panel p { margin: 0 0 8px; }
+.qr-panel img { display: block; width: min(320px, 100%); margin: 10px auto; border-radius: 8px; }
 .view-switch { display: grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 11px; background: #e5eee8; }
 .view-switch button { padding: 8px 13px; border-radius: 8px; background: transparent; color: #53675c; font-size: 11px; }
 .view-switch button.active { background: #fff; color: #086b3a; box-shadow: 0 2px 8px #173c2618; }
