@@ -507,10 +507,12 @@ async function loadLawyers() {
 
 function renderLawyerBoard(){
 	const container=document.querySelector("#lawyerColumns");container.replaceChildren();
+	const query=document.querySelector("#lawyerSearch").value.trim().toLocaleLowerCase("pt-BR");const entityFilter=document.querySelector("#lawyerEntityFilter").value;const typeFilter=document.querySelector("#lawyerTypeFilter").value;const statusFilter=document.querySelector("#lawyerStatusFilter").value;
 	const columns=[{id:0,name:"Sem advogado",color:"#8a9890"},...allLawyers];
 	for(const lawyer of columns){
 		const column=document.createElement("section");column.className="lawyer-column";column.style.setProperty("--lawyer-color",lawyer.color);
-		const entities=[...allContacts.filter(item=>Number(item.lawyer_id||0)===Number(lawyer.id)).map(item=>({...item,entity_kind:"contact"})),...allGroups.filter(item=>Number(item.lawyer_id||0)===Number(lawyer.id)).map(item=>({...item,entity_kind:"group"}))];
+		const contacts=entityFilter==="group"?[]:allContacts.filter(item=>Number(item.lawyer_id||0)===Number(lawyer.id)).filter(item=>!query||contactDisplayName(item).toLocaleLowerCase("pt-BR").includes(query)||String(item.phone).includes(query)).filter(item=>(!typeFilter||item.contact_type===typeFilter)&&(!statusFilter||item.status===statusFilter)).map(item=>({...item,entity_kind:"contact"}));
+		const groups=entityFilter==="contact"||typeFilter||statusFilter?[]:allGroups.filter(item=>Number(item.lawyer_id||0)===Number(lawyer.id)).filter(item=>!query||item.name.toLocaleLowerCase("pt-BR").includes(query)).map(item=>({...item,entity_kind:"group"}));const entities=[...contacts,...groups];
 		const heading=document.createElement("div");heading.className="lawyer-column-heading";heading.innerHTML=`<strong>${lawyer.name}</strong><span>${entities.length}</span>`;column.append(heading);
 		const cards=document.createElement("div");cards.className="lawyer-card-list";
 		for(const entity of entities){const card=document.createElement("article");card.className="lawyer-card";card.draggable=true;card.dataset.kind=entity.entity_kind;card.dataset.id=entity.entity_kind==="group"?entity.id:String(entity.id);
@@ -715,6 +717,10 @@ document.querySelector("#kanbanSearch").addEventListener("input", (event) => {
 document.querySelector("#kanbanTypeFilter").addEventListener("change", renderKanban);
 document.querySelector("#kanbanStatusFilter").addEventListener("change", renderKanban);
 document.querySelector("#kanbanEntityFilter").addEventListener("change", renderKanban);
+document.querySelector("#lawyerSearch").addEventListener("input",renderLawyerBoard);
+document.querySelector("#lawyerEntityFilter").addEventListener("change",renderLawyerBoard);
+document.querySelector("#lawyerTypeFilter").addEventListener("change",renderLawyerBoard);
+document.querySelector("#lawyerStatusFilter").addEventListener("change",renderLawyerBoard);
 document.querySelector("#saveGroupClassification").addEventListener("click", async () => {
   if(!activeGroup)return; const stage=document.querySelector("#groupStage").value; const priority=document.querySelector("#groupPriority").value;
 	const lawyer_id=Number(document.querySelector("#groupLawyer").value||0); try { const updated=await call(`/api/groups?id=${encodeURIComponent(activeGroup.id)}`,{method:"PATCH",body:JSON.stringify({attendance_stage:stage,priority,lawyer_id,archived:false})}); Object.assign(activeGroup,updated,allLawyers.find(item=>Number(item.id)===lawyer_id)?{lawyer_name:allLawyers.find(item=>Number(item.id)===lawyer_id).name,lawyer_color:allLawyers.find(item=>Number(item.id)===lawyer_id).color}:{lawyer_name:"",lawyer_color:""}); const stored=allGroups.find((item)=>item.id===activeGroup.id); if(stored)Object.assign(stored,activeGroup); renderGroups(); renderLawyerBoard(); showContactResult("Classificação do grupo salva."); }
