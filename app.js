@@ -129,7 +129,9 @@ async function loadGroups() {
 function renderGroups() {
   const list = document.querySelector("#groupList");
   const query = document.querySelector("#groupSearch").value.trim().toLocaleLowerCase("pt-BR");
-  const groups = allGroups.filter((group) => !query || group.name.toLocaleLowerCase("pt-BR").includes(query));
+  const groups = allGroups
+    .filter((group) => !query || group.name.toLocaleLowerCase("pt-BR").includes(query))
+    .sort((left, right) => left.name.localeCompare(right.name, "pt-BR", { sensitivity: "base", numeric: true }));
   list.replaceChildren();
   if (!groups.length) { list.innerHTML = '<p class="muted">Nenhum grupo encontrado.</p>'; return; }
   for (const group of groups) {
@@ -329,7 +331,9 @@ function openContact(contact = null) {
 function renderContacts() {
 	const type = document.querySelector("#contactTypeFilter").value;
 	const status = document.querySelector("#contactStatusFilter").value;
-	const contacts = allContacts.filter((contact) => (!type || contact.contact_type === type) && (!status || contact.status === status));
+	const contacts = allContacts
+	  .filter((contact) => (!type || contact.contact_type === type) && (!status || contact.status === status))
+	  .sort((left, right) => contactDisplayName(left).localeCompare(contactDisplayName(right), "pt-BR", { sensitivity: "base", numeric: true }));
 	contactList.replaceChildren();
 	if (!contacts.length) { contactList.innerHTML = '<p class="muted">Nenhum contato encontrado.</p>'; return; }
 	for (const contact of contacts) {
