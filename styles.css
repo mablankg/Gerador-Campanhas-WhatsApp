@@ -141,4 +141,18 @@ body { font-size: 13px; }
 .service-workspace.right-collapsed { grid-template-columns: 280px minmax(420px,1fr); }
 @media (max-width: 1050px) { .service-workspace { grid-template-columns: 260px minmax(380px,1fr); } }
 
+/* Encaixe integral na janela */
+html, body { height: 100%; }
+body { overflow: hidden; }
+.shell { height: 100vh; padding: 10px 12px; display: flex; flex-direction: column; }
+.shell > header { flex: 0 0 auto; min-height: 58px; margin-bottom: 9px; align-items: center; }
+.shell > header h1 { font-size: 25px; line-height: 1.05; }
+.shell > header .sub { margin: 4px 0 0; font-size: 12px; line-height: 1.3; }
+.service-workspace { flex: 1 1 auto; height: auto; min-height: 0; }
+.contact-list { max-height: none; height: calc(100vh - 278px); }
+.conversation-pane, .contact-rail, .detail-rail { min-height: 0; }
+.message-thread, .detail-content { min-height: 0; }
+.groups-card { flex: 0 0 auto; max-height: calc(100vh - 20px); overflow: auto; }
+@media (max-width: 720px) { body { overflow: hidden; } .shell { height: 100vh; padding: 0; } .service-workspace { height: auto; flex: 1 1 auto; } }
+
 
