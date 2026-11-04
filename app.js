@@ -835,11 +835,11 @@ document.querySelector("#syncContacts").addEventListener("click", async () => {
 });
 
 document.querySelector("#resetDirectory").addEventListener("click", async () => {
-  if (!window.confirm("Isso apagará contatos e grupos do número selecionado, mas manterá as mensagens. Continuar?")) return;
+  if (!window.confirm("Isso apagará contatos, grupos e classificações do número selecionado. As mensagens serão mantidas. Continuar?")) return;
   const button=document.querySelector("#resetDirectory"); button.disabled=true; button.textContent="Limpando...";
-  try { const queued=await call("/api/directory-reset",{method:"POST",body:"{}"}); const completed=await poll(queued.id); await Promise.all([loadContacts(),loadGroups()]); showContactResult(`Base reimportada: ${completed.contact_count||0} contatos e ${completed.group_count||0} grupos.`); }
-  catch(error){showContactResult(`Não foi possível limpar e reimportar: ${error.message}`,true);}
-  finally{button.disabled=false;button.textContent="Limpar e reimportar";}
+  try { const queued=await call("/api/directory-reset",{method:"POST",body:"{}"}); const completed=await poll(queued.id); allContacts=[]; allGroups=[]; await Promise.all([loadContacts(),loadGroups()]); showContactResult(`Base zerada: ${completed.contact_count||0} contatos e ${completed.group_count||0} grupos.`); }
+  catch(error){showContactResult(`Não foi possível zerar a base: ${error.message}`,true);}
+  finally{button.disabled=false;button.textContent="Zerar base";}
 });
 
 contactForm.addEventListener("submit", async (event) => {
