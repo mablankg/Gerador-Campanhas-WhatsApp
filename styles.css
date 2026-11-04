@@ -206,7 +206,7 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .kanban-toolbar h2 { margin: 0; font-size: 18px; }
 .kanban-toolbar-actions { display: flex; align-items: center; gap: 10px; }
 .kanban-toolbar-actions button { padding: 8px 11px; font-size: 10px; }
-.kanban-filters { flex: 0 0 auto; width: min(420px, calc(100% - 24px)); display: grid; grid-template-columns: 1fr 1fr; gap: 9px 8px; margin: 9px 12px 0; padding: 0; background: transparent; }
+.kanban-filters { flex: 0 0 auto; width: min(660px, calc(100% - 24px)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px 8px; margin: 9px 12px 0; padding: 0; background: transparent; }
 .kanban-filters input { grid-column: 1 / -1; }
 .kanban-filters input, .kanban-filters select { padding: 9px 10px; border: 1px solid #cbd8d0; border-radius: 9px; font-size: 12px; background: #fbfdfb; }
 .priority-legend { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -239,7 +239,7 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .contact-item { border-left: 5px solid var(--stage-color, transparent); }
 .contact-item:hover { border-left-color: var(--stage-color, #b7d7c3); }
 .contact-item.active, .contact-item[aria-current="true"] { border-left-color: var(--stage-color, #08783f); box-shadow: inset 3px 0 var(--stage-color, #08783f), 0 3px 12px #08783f24; }
-@media (max-width: 720px) { .header-actions { align-items: flex-end; flex-direction: column-reverse; } .view-switch button { padding: 6px 9px; } .kanban-workspace { border-radius: 0; } .kanban-columns { grid-auto-columns: minmax(250px, 82vw); } }
+@media (max-width: 720px) { .header-actions { align-items: flex-end; flex-direction: column-reverse; } .view-switch button { padding: 6px 9px; } .kanban-workspace { border-radius: 0; } .kanban-columns { grid-auto-columns: minmax(250px, 82vw); } .kanban-filters { grid-template-columns: 1fr; } .kanban-filters input { grid-column: 1; } }
 
 .stage-modal { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 18px; background: #10251a88; backdrop-filter: blur(3px); }
 .stage-modal.hidden { display: none; }
