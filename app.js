@@ -186,6 +186,7 @@ function renderGroups() {
   if (!groups.length) { list.innerHTML = '<p class="muted">Nenhum grupo encontrado.</p>'; return; }
   for (const group of groups) {
     const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${activeGroup?.id===group.id?" active":""}`; button.dataset.id = group.id;
+    if (activeGroup?.id === group.id) button.setAttribute("aria-current", "true");
     const name = document.createElement("strong"); name.textContent = group.name;
     const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${group.participant_count} participantes${group.is_announce ? " · somente administradores" : ""}`;
     button.append(name, detail); button.addEventListener("click", () => openGroup(group)); list.append(button);
@@ -215,7 +216,7 @@ function openGroup(group) {
   document.querySelector("#to").value=group.id; message.disabled=false; sendButton.disabled=false;
   document.querySelectorAll(".detail-tabs button").forEach((item,index)=>item.classList.toggle("active",index===0));
   document.querySelectorAll("[data-panel]").forEach((panel)=>panel.classList.toggle("hidden",panel.dataset.panel!=="group"));
-  document.querySelectorAll("#groupList .contact-item").forEach((item)=>item.classList.toggle("active",item.dataset.id===group.id));
+  document.querySelectorAll("#groupList .contact-item").forEach((item)=>{ const selected=item.dataset.id===group.id; item.classList.toggle("active",selected); item.toggleAttribute("aria-current",selected); });
   loadGroupMessages(group); loadComments();
 }
 
@@ -355,7 +356,7 @@ function openContact(contact = null) {
 	document.querySelector("#contactExtra").value = extraToText(contact?.extra);
 	renderExtraFields(contact?.extra);
   document.querySelector("#archiveContact").classList.toggle("hidden", !contact);
-  document.querySelectorAll(".contact-item").forEach((item) => item.classList.toggle("active", item.dataset.id === String(contact?.id || "")));
+	document.querySelectorAll("#contactList .contact-item").forEach((item) => { const selected=item.dataset.id === String(contact?.id || ""); item.classList.toggle("active", selected); item.toggleAttribute("aria-current", selected); });
 	document.querySelector("#conversationName").textContent = contact ? contactDisplayName(contact) : "Novo contato";
 	document.querySelector("#conversationPhone").textContent = contact ? formatPhone(contact.phone) : "Preencha a ficha ao lado";
 	document.querySelector("#detailContactName").textContent = contact ? contactDisplayName(contact) : "Novo contato";
@@ -381,6 +382,7 @@ function renderContacts() {
 	if (!contacts.length) { contactList.innerHTML = '<p class="muted">Nenhum contato encontrado.</p>'; return; }
 	for (const contact of contacts) {
 		const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${String(activeContact?.id||"")===String(contact.id)?" active":""}`; button.dataset.id = contact.id;
+		if (String(activeContact?.id || "") === String(contact.id)) button.setAttribute("aria-current", "true");
 		const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
 		const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${formatPhone(contact.phone)} · ${contact.contact_type || "lead"} · ${contact.status || "active"}`;
 		button.append(name, detail);
