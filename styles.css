@@ -74,6 +74,12 @@ h3 { margin: 0 0 22px; font-size: 19px; }
 .message-bubble { max-width: 78%; padding: 11px 14px; border-radius: 13px; background: #fff; box-shadow: 0 2px 8px #173c2612; line-height: 1.45; white-space: pre-wrap; }
 .message-bubble.mine { align-self: flex-end; color: #fff; background: #16835f; }
 .message-bubble time { display: block; margin-top: 5px; font-size: 10px; text-align: right; opacity: .7; }
+.message-media { display: block; width: min(100%, 420px); max-height: 380px; margin-top: 7px; border-radius: 9px; object-fit: contain; background: #0d1713; }
+.message-media.sticker { width: min(180px, 100%); background: transparent; }
+audio.message-media { height: 40px; background: transparent; }
+.message-document { display: block; margin-top: 7px; padding: 10px; border-radius: 8px; background: #edf4ef; color: #155c39; text-decoration: none; font-weight: 700; overflow-wrap: anywhere; }
+.message-bubble.mine .message-document { background: #ffffff26; color: #fff; }
+.media-unavailable { display: block; margin-top: 6px; opacity: .75; }
 .message-composer { padding: 12px 16px; background: #fff; border-top: 1px solid #dce6df; display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
 .message-composer textarea { min-height: 52px; max-height: 130px; resize: vertical; }
 .composer-actions { display: grid; gap: 6px; justify-items: end; }

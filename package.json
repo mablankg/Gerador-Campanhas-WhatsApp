@@ -6,7 +6,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "check": "node --check app.js && node --check lib/whatsapp.js && node --check api/status.js && node --check api/send.js && node --check api/command.js && node --check api/groups.js && node --check api/groups-sync.js && node --check api/group-send.js && node --check api/contacts.js && node --check api/contacts-sync.js && node --check api/contact-messages.js && node --check api/group-messages.js && node --check api/comments.js"
+    "check": "node --check app.js && node --check lib/whatsapp.js && node --check api/status.js && node --check api/send.js && node --check api/command.js && node --check api/groups.js && node --check api/groups-sync.js && node --check api/group-send.js && node --check api/contacts.js && node --check api/contacts-sync.js && node --check api/contact-messages.js && node --check api/group-messages.js && node --check api/comments.js && node --check api/media.js"
   }
 }
 

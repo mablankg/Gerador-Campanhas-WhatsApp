@@ -25,6 +25,7 @@ let activeGroup = null;
 let liveRefreshTimer = null;
 let liveRefreshBusy = false;
 let liveRefreshCycle = 0;
+let mediaObjectURLs = [];
 accessTokenInput.value = accessToken;
 
 togglePassword.addEventListener("click", () => {
@@ -55,6 +56,41 @@ async function call(path, options = {}) {
   const body = await response.json().catch(() => ({ error: "invalid_response" }));
   if (!response.ok) throw Object.assign(new Error(body.error || "request_failed"), { status: response.status });
   return body;
+}
+
+function clearMediaObjectURLs() {
+  for (const url of mediaObjectURLs) URL.revokeObjectURL(url);
+  mediaObjectURLs = [];
+}
+
+async function appendMessageMedia(bubble, media) {
+  if (!media?.id) return;
+  const response = await fetch(`/api/media?id=${encodeURIComponent(media.id)}`, { headers: { "x-app-token": accessToken } });
+  if (!response.ok) {
+    const unavailable = document.createElement("small"); unavailable.className = "media-unavailable"; unavailable.textContent = "Anexo indisponível"; bubble.append(unavailable); return;
+  }
+  const url = URL.createObjectURL(await response.blob()); mediaObjectURLs.push(url);
+  let element;
+  if (media.type === "image" || media.type === "sticker") {
+    element = document.createElement("img"); element.src = url; element.alt = media.caption || (media.type === "sticker" ? "Figurinha" : "Imagem"); element.className = `message-media ${media.type}`;
+  } else if (media.type === "audio") {
+    element = document.createElement("audio"); element.src = url; element.controls = true; element.preload = "metadata"; element.className = "message-media";
+  } else if (media.type === "video") {
+    element = document.createElement("video"); element.src = url; element.controls = true; element.preload = "metadata"; element.className = "message-media";
+  } else {
+    element = document.createElement("a"); element.href = url; element.download = media.file_name || "documento"; element.textContent = `📄 ${media.file_name || "Baixar documento"}`; element.className = "message-document";
+  }
+  bubble.append(element);
+}
+
+async function renderMessageBubble(thread, item) {
+  const bubble = document.createElement("div"); bubble.className = `message-bubble${item.from_me ? " mine" : ""}`;
+  const text = item.text || item.media?.caption;
+  if (text) { const body = document.createElement("span"); body.textContent = text; bubble.append(body); }
+  await appendMessageMedia(bubble, item.media);
+  if (!text && !item.media) { const body = document.createElement("span"); body.textContent = "Mensagem sem texto"; bubble.append(body); }
+  const time = document.createElement("time"); time.textContent = new Date(item.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+  bubble.append(time); thread.append(bubble);
 }
 
 async function status() {
@@ -145,14 +181,9 @@ function renderGroups() {
 async function loadGroupMessages(group, silent = false) {
   const thread = document.querySelector("#messageThread"); if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
-    const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`); thread.replaceChildren();
+    const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`); clearMediaObjectURLs(); thread.replaceChildren();
     if (!data.messages?.length) { thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este grupo.</div>'; return; }
-    for (const item of data.messages) {
-      const bubble=document.createElement("div"); bubble.className=`message-bubble${item.from_me?" mine":""}`;
-      const body=document.createElement("span"); body.textContent=item.text||"Mensagem sem texto";
-      const time=document.createElement("time"); time.textContent=new Date(item.timestamp).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"});
-      bubble.append(body,time); thread.append(bubble);
-    }
+    for (const item of data.messages) await renderMessageBubble(thread, item);
     thread.scrollTop=thread.scrollHeight;
   } catch(error){ if (!silent) thread.innerHTML=`<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`; }
 }
@@ -273,17 +304,12 @@ async function loadContactMessages(contact, silent = false) {
 	if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
     const data = await call(`/api/contact-messages?id=${encodeURIComponent(contact.id)}`);
-    thread.replaceChildren();
+    clearMediaObjectURLs(); thread.replaceChildren();
     if (!data.messages?.length) {
       thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este contato.</div>';
       return;
     }
-    for (const item of data.messages) {
-      const bubble = document.createElement("div"); bubble.className = `message-bubble${item.from_me ? " mine" : ""}`;
-      const body = document.createElement("span"); body.textContent = item.text || "Mensagem sem texto";
-      const time = document.createElement("time"); time.textContent = new Date(item.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-      bubble.append(body, time); thread.append(bubble);
-    }
+    for (const item of data.messages) await renderMessageBubble(thread, item);
     thread.scrollTop = thread.scrollHeight;
   } catch (error) {
 	if (!silent) thread.innerHTML = `<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`;
