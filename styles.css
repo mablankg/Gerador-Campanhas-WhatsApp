@@ -233,8 +233,8 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .lawyer-card small { color: #68776f; }
 .card-archive-check { position: absolute; top: 9px; right: 9px; accent-color: #147748; z-index: 2; }
 .kanban-card { position: relative; }
-.view-switch { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); padding: 3px; border-radius: 11px; background: #e5eee8; }
-.view-switch button { padding: 8px 13px; border-radius: 8px; background: transparent; color: #53675c; font-size: 11px; }
+.view-switch { display: grid; grid-template-columns: repeat(3, auto); grid-auto-flow: column; width: max-content; min-width: max-content; flex: 0 0 auto; padding: 3px; border-radius: 11px; background: #e5eee8; white-space: nowrap; }
+.view-switch button { min-width: 82px; padding: 8px 13px; border-radius: 8px; background: transparent; color: #53675c; font-size: 11px; white-space: nowrap; }
 .view-switch button.active { background: #fff; color: #086b3a; box-shadow: 0 2px 8px #173c2618; }
 .kanban-workspace { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #dce6df; border-radius: 15px; background: linear-gradient(135deg, #e1f0e7, #d9e8e8); box-shadow: 0 22px 70px #173c2612; }
 .kanban-workspace.hidden { display: none; }
