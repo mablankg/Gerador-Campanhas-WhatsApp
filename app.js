@@ -162,6 +162,7 @@ async function status() {
 async function loadAccounts() {
   const data = await call("/api/status?accounts=1");
   whatsappAccounts = data.accounts || [];
+	document.querySelector("#accountCount").textContent=String(whatsappAccounts.length);
   if (!whatsappAccounts.some((item) => item.id === activeAccountID)) activeAccountID = whatsappAccounts[0]?.id || "primary";
   const select = document.querySelector("#accountSelect");
   select.replaceChildren(...whatsappAccounts.map((item) => new Option(`${item.name}${item.phone ? ` · ${formatPhone(item.phone)}` : ""}`, item.id)));
