@@ -311,5 +311,13 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .stage-modal-card input { padding: 10px; }
 .stage-modal-card input[type="color"] { height: 44px; padding: 4px; }
 .stage-form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.composer-input-wrap { display: flex; align-items: center; gap: 7px; }
+.composer-input-wrap textarea { flex: 1 1 auto; }
+.emoji-button { border: 0; background: transparent; padding: 5px; font-size: 20px; cursor: pointer; }
+.emoji-button:disabled { opacity: .45; cursor: not-allowed; }
+.attachment-preview { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; font-size: 11px; color: #526159; }
+.attachment-preview span { padding: 4px 7px; border-radius: 8px; background: #e6f2eb; }
+.emoji-panel { display: flex; flex-wrap: wrap; gap: 6px; padding: 7px; border: 1px solid #cbdacf; border-radius: 8px; background: #fff; font-size: 20px; }
+.emoji-panel span { cursor: pointer; }
 
 
