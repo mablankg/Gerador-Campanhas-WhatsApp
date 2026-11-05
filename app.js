@@ -185,8 +185,17 @@ function renderAccountList() {
     const action = document.createElement("button"); action.type = "button"; action.className = "secondary";
     action.textContent = account.status === "connected" ? "Desconectar" : "Conectar";
     action.addEventListener("click", () => account.status === "connected" ? disconnectAccount(account) : connectAccount(account));
-    row.append(info, state, action); list.append(row);
+    const rename = document.createElement("button"); rename.type = "button"; rename.className = "secondary"; rename.textContent = "Renomear";
+    rename.addEventListener("click", () => renameAccount(account));
+    row.append(info, state, rename, action); list.append(row);
   }
+}
+
+async function renameAccount(account) {
+  const name = window.prompt("Novo nome para esta conexão:", account.name);
+  if (name === null || !name.trim() || name.trim() === account.name) return;
+  try { await call("/api/status", { method: "POST", body: JSON.stringify({ action: "rename", account: account.id, name: name.trim() }) }); await loadAccounts(); showAccountResult("Nome da conexão atualizado."); }
+  catch (error) { showAccountResult(`Não foi possível renomear: ${error.message}`, true); }
 }
 
 async function connectAccount(account) {
