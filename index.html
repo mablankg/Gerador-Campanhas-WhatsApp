@@ -21,8 +21,8 @@
       <dialog class="account-dialog" id="accountDialog"><form method="dialog" class="dialog-card"><div class="dialog-heading"><div><p class="eyebrow">WHATSAPP</p><h2>Gerenciar números</h2></div><button class="icon-button" value="cancel" aria-label="Fechar">×</button></div><div id="accountList" class="account-list"></div><div class="new-account"><input id="newAccountName" maxlength="60" placeholder="Nome da conexão, ex.: Atendimento 2" /><button id="addAccount" type="button">Adicionar número</button></div><div class="qr-panel hidden" id="qrPanel"><h3>Leia o QR Code no novo celular</h3><p>WhatsApp → Aparelhos conectados → Conectar aparelho.</p><img id="accountQR" alt="QR Code para conectar o WhatsApp" /><small>O código é atualizado automaticamente.</small></div><div class="result hidden" id="accountResult"></div></form></dialog>
 
       <section class="card access-card" id="accessCard">
-        <h2>Acesso</h2>
-        <p>Digite a senha do painel configurada na Vercel.</p>
+        <h2>BlankJuridico</h2>
+        <p>Entre para acessar sua conta e os dados jurídicos.</p>
         <form id="accessForm">
           <label>Senha de acesso
             <span class="password-field">
@@ -30,7 +30,8 @@
               <button class="password-toggle" id="togglePassword" type="button" aria-label="Mostrar senha" aria-pressed="false" title="Mostrar senha">👁</button>
             </span>
           </label>
-          <button type="submit">Entrar</button>
+          <label class="security-consent"><input id="securityConsent" type="checkbox" required /> <span>Concordo com a política de segurança.</span></label>
+          <div class="access-actions"><button type="submit">Entrar</button><button class="secondary" id="changePassword" type="button">Trocar senha</button></div>
         </form>
       </section>
 

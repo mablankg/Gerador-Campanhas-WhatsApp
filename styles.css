@@ -58,6 +58,9 @@ body.auth-locked .shell > header { display: none; }
 body.auth-locked .access-card { width: min(420px, 100%); max-width: 420px; margin: 0; }
 body.auth-locked .access-card h2 { text-align: center; }
 body.auth-locked .access-card > p { text-align: center; }
+.access-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.security-consent { display: flex; flex-direction: row; align-items: center; gap: 8px; font-size: 12px; color: #526159; }
+.security-consent input { width: 15px; height: 15px; accent-color: #177447; }
 @media (max-width: 680px) { .shell { padding: 36px 0; } header { display: grid; } .connection { justify-self: start; } .form-footer, .section-heading { align-items: stretch; flex-direction: column; } .group-grid, .contacts-layout, .contact-fields { grid-template-columns: 1fr; } .group-grid form + form { border-left: 0; border-top: 1px solid #e1e9e4; padding-left: 0; padding-top: 30px; } .contacts-sidebar { border-right: 0; border-bottom: 1px solid #e1e9e4; padding: 0 0 22px; } }
 
 /* Atendimento em três painéis */

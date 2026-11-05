@@ -13,6 +13,7 @@ const groupResult = document.querySelector("#groupResult");
 const groupSelect = document.querySelector("#groupSelect");
 const accessTokenInput = document.querySelector("#accessToken");
 const togglePassword = document.querySelector("#togglePassword");
+const changePassword = document.querySelector("#changePassword");
 const contactList = document.querySelector("#contactList");
 const contactForm = document.querySelector("#contactForm");
 const contactEmpty = document.querySelector("#contactEmpty");
@@ -53,6 +54,8 @@ togglePassword.addEventListener("click", () => {
   togglePassword.setAttribute("aria-label", showing ? "Mostrar senha" : "Ocultar senha");
   togglePassword.title = showing ? "Mostrar senha" : "Ocultar senha";
 });
+
+changePassword.addEventListener("click", () => showResult("A troca de senha será habilitada no cadastro de usuários."));
 
 function showResult(text, error = false) {
   result.textContent = text;
