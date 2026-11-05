@@ -36,6 +36,7 @@ let mediaObjectURLs = [];
 let renderedConversationKey = "";
 let renderedConversationSignature = "";
 let messageEventCursor = "latest";
+document.body.classList.add("auth-locked");
 const unreadContacts = new Set();
 const unreadGroups = new Set();
 conversationPane.append(kanbanBoard, document.querySelector("#lawyerBoard"));
@@ -238,6 +239,7 @@ async function switchAccount(id) {
 
 async function unlock() {
   if (!accessToken || !(await status())) return;
+  document.body.classList.remove("auth-locked");
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
@@ -925,7 +927,7 @@ sendForm.addEventListener("submit", async (event) => {
 	if (activeContact) await loadContactMessages(activeContact);
 	if (activeGroup) await loadGroupMessages(activeGroup);
   } catch (error) {
-    if (error.status === 401) { localStorage.removeItem("campaign_access"); accessToken = ""; accessCard.classList.remove("hidden"); composer.classList.add("hidden"); groupsCard.classList.add("hidden"); }
+    if (error.status === 401) { localStorage.removeItem("campaign_access"); accessToken = ""; document.body.classList.add("auth-locked"); accessCard.classList.remove("hidden"); composer.classList.add("hidden"); groupsCard.classList.add("hidden"); }
     showResult(`Não foi possível enviar: ${error.message}`, true);
   } finally {
     sendButton.disabled = false;
