@@ -366,7 +366,7 @@ function openGroup(group) {
   document.querySelector("#groupStage").value=group.attendance_stage||"new"; document.querySelector("#groupPriority").value=group.priority||"normal";
 	document.querySelector("#groupLawyer").value=String(group.lawyer_id||0);
   document.querySelector("#groupUpdatedAt").textContent=`Atualizado em ${new Date(group.updated_at).toLocaleString("pt-BR")}`;
-  document.querySelector("#to").value=group.id; message.disabled=false; sendButton.disabled=false;
+  document.querySelector("#to").value=group.id; message.disabled=false; messageAttachment.disabled=false; sendButton.disabled=false;
   document.querySelectorAll(".detail-tabs button").forEach((item,index)=>item.classList.toggle("active",index===0));
   document.querySelectorAll("[data-panel]").forEach((panel)=>panel.classList.toggle("hidden",panel.dataset.panel!=="group"));
   document.querySelectorAll("#groupList .contact-item").forEach((item)=>{ const selected=item.dataset.id===group.id; item.classList.toggle("active",selected); item.toggleAttribute("aria-current",selected); if(selected)item.classList.remove("incoming"); });
@@ -659,6 +659,7 @@ function openContact(contact = null) {
 	document.querySelector("#entityDetailsTab").dataset.tab = "contact";
 	document.querySelector("#to").value = contact?.phone || "";
 	message.disabled = !contact;
+	messageAttachment.disabled = !contact;
 	sendButton.disabled = !contact;
 	const history = document.querySelector("#historyContent");
 	history.innerHTML = contact ? `<div class="timeline-item"><strong>Primeiro contato</strong><br>${new Date(contact.first_contact_at).toLocaleString("pt-BR")}</div><div class="timeline-item"><strong>Última atividade</strong><br>${new Date(contact.last_contact_at).toLocaleString("pt-BR")}</div>` : "Salve o contato para iniciar o histórico.";
