@@ -18,6 +18,7 @@ const groupSelect = document.querySelector("#groupSelect");
 const accessTokenInput = document.querySelector("#accessToken");
 const togglePassword = document.querySelector("#togglePassword");
 const changePassword = document.querySelector("#changePassword");
+const resetDirectoryButton = document.querySelector("#resetDirectory");
 const contactList = document.querySelector("#contactList");
 const contactForm = document.querySelector("#contactForm");
 const contactEmpty = document.querySelector("#contactEmpty");
@@ -26,6 +27,7 @@ const kanbanBoard = document.querySelector("#kanbanBoard");
 const viewSwitch = document.querySelector("#viewSwitch");
 const conversationPane = document.querySelector(".conversation-pane");
 let accessToken = localStorage.getItem("campaign_access") || "";
+let userRole = localStorage.getItem("blank_user_role") || "master";
 let activeAccountID = localStorage.getItem("blank_whatsapp_account") || "primary";
 let whatsappAccounts = [];
 let qrPollTimer = null;
@@ -50,6 +52,8 @@ const savedRightPanelWidth = Number(localStorage.getItem("blank_right_panel_widt
 if (savedLeftPanelWidth >= 230 && savedLeftPanelWidth <= 520) contactsCard.style.setProperty("--left-rail-width", `${savedLeftPanelWidth}px`);
 if (savedRightPanelWidth >= 280 && savedRightPanelWidth <= 600) contactsCard.style.setProperty("--right-rail-width", `${savedRightPanelWidth}px`);
 accessTokenInput.value = accessToken;
+function applyRoleVisibility() { if (resetDirectoryButton) resetDirectoryButton.classList.toggle("hidden", !["master", "admin"].includes(userRole)); }
+applyRoleVisibility();
 
 togglePassword.addEventListener("click", () => {
   const showing = accessTokenInput.type === "text";
