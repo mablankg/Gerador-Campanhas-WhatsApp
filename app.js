@@ -736,6 +736,10 @@ function switchCRMMode(mode){
   const contacts=mode==="contacts"; document.querySelector("#contactsMode").classList.toggle("hidden",!contacts); document.querySelector("#groupsMode").classList.toggle("hidden",contacts);
   document.querySelector("#contactsModeTab").classList.toggle("active",contacts); document.querySelector("#groupsModeTab").classList.toggle("active",!contacts);
   document.querySelector(".rail-heading h2").textContent=contacts?"Contatos":"Grupos";
+  const entityValue = contacts ? "contact" : "group";
+  document.querySelector("#kanbanEntityFilter").value = entityValue;
+  document.querySelector("#lawyerEntityFilter").value = entityValue;
+  renderKanban(); renderLawyerBoard();
 }
 document.querySelector("#contactsModeTab").addEventListener("click",()=>switchCRMMode("contacts"));
 document.querySelector("#groupsModeTab").addEventListener("click",()=>switchCRMMode("groups"));
