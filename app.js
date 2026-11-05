@@ -262,6 +262,7 @@ async function unlock() {
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
   contactsCard.classList.remove("hidden");
+	logoutButton?.classList.remove("hidden");
   viewSwitch.classList.remove("hidden");
   document.querySelector("#accountSwitch").classList.remove("hidden");
   await loadAccounts();
