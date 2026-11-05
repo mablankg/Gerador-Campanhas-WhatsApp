@@ -18,6 +18,7 @@ const groupSelect = document.querySelector("#groupSelect");
 const accessTokenInput = document.querySelector("#accessToken");
 const togglePassword = document.querySelector("#togglePassword");
 const changePassword = document.querySelector("#changePassword");
+const logoutButton = document.querySelector("#logoutButton");
 const resetDirectoryButton = document.querySelector("#resetDirectory");
 const contactList = document.querySelector("#contactList");
 const contactForm = document.querySelector("#contactForm");
@@ -54,6 +55,8 @@ if (savedRightPanelWidth >= 280 && savedRightPanelWidth <= 600) contactsCard.sty
 accessTokenInput.value = accessToken;
 function applyRoleVisibility() { if (resetDirectoryButton) resetDirectoryButton.classList.toggle("hidden", !["master", "admin"].includes(userRole)); }
 applyRoleVisibility();
+function logout(){ localStorage.removeItem("campaign_access"); localStorage.removeItem("blank_user_role"); accessToken=""; userRole="user"; document.body.classList.add("auth-locked"); accessCard.classList.remove("hidden"); contactsCard.classList.add("hidden"); groupsCard.classList.add("hidden"); document.querySelector("#kanbanBoard")?.classList.add("hidden"); document.querySelector("#lawyerBoard")?.classList.add("hidden"); logoutButton?.classList.add("hidden"); accessTokenInput.value=""; }
+logoutButton?.addEventListener("click", logout);
 
 togglePassword.addEventListener("click", () => {
   const showing = accessTokenInput.type === "text";
@@ -963,10 +966,13 @@ document.querySelector("#groupSendForm").addEventListener("submit", async (event
   button.disabled = true;
   showGroupResult("Mensagem recebida pela fila. Aguardando o WhatsApp...");
   try {
-    const queued = await call("/api/group-send", { method: "POST", body: JSON.stringify({ group_id: groupSelect.value, text: document.querySelector("#groupMessage").value }) });
+    const groupFile = document.querySelector("#groupAttachment")?.files?.[0];
+    const media = groupFile ? await readAttachment(groupFile) : null;
+    const queued = await call("/api/group-send", { method: "POST", body: JSON.stringify({ group_id: groupSelect.value, text: document.querySelector("#groupMessage").value, ...(media ? { media } : {}) }) });
     const completed = await poll(queued.id);
     showGroupResult(`Mensagem enviada ao grupo. ID: ${completed.message_id || "confirmado"}`);
     document.querySelector("#groupMessage").value = "";
+    if (document.querySelector("#groupAttachment")) document.querySelector("#groupAttachment").value = "";
   } catch (error) {
     showGroupResult(`Não foi possível enviar ao grupo: ${error.message}`, true);
   } finally {
