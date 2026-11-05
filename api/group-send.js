@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
   const groupId = String(req.body?.group_id || "");
   const text = String(req.body?.text || "").trim();
   const media = req.body?.media && typeof req.body.media === "object" ? req.body.media : null;
-  if (!/^[0-9-]+@g\.us$/.test(groupId) || (!text && !media?.data) || Buffer.byteLength(text) > 8000 || String(media?.data || "").length > 34 * 1024 * 1024) {
+  if (!/^[0-9-]+@g\.us$/.test(groupId) || (!text && !media?.data) || Buffer.byteLength(text) > 8000 || String(media?.data || "").length > 70 * 1024 * 1024) {
     return res.status(400).json({ error: "invalid_group_message" });
   }
   try {
