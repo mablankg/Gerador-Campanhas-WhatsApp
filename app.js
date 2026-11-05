@@ -6,6 +6,9 @@ const accessForm = document.querySelector("#accessForm");
 const sendForm = document.querySelector("#sendForm");
 const message = document.querySelector("#message");
 const messageAttachment = document.querySelector("#messageAttachment");
+const emojiButton = document.querySelector("#emojiButton");
+const emojiPanel = document.querySelector("#emojiPanel");
+const attachmentPreview = document.querySelector("#attachmentPreview");
 const counter = document.querySelector("#counter");
 const result = document.querySelector("#result");
 const connection = document.querySelector("#connection");
@@ -84,7 +87,11 @@ function clearMediaObjectURLs() {
   for (const url of mediaObjectURLs) URL.revokeObjectURL(url);
   mediaObjectURLs = [];
 }
-async function readAttachment(input) { const file=input?.files?.[0]; if(!file)return null; if(file.size>25*1024*1024)throw new Error("arquivo_excede_25mb"); const bytes=new Uint8Array(await file.arrayBuffer()); let binary=""; for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000)); const type=file.type.startsWith("image/")?"image":file.type.startsWith("audio/")?"audio":file.type.startsWith("video/")?"video":"document"; return {type,mime_type:file.type||"application/octet-stream",file_name:file.name,caption:"",data:btoa(binary)}; }
+async function readAttachment(file) { if(!file)return null; if(file.size>50*1024*1024)throw new Error(`arquivo_excede_50mb:${file.name}`); const bytes=new Uint8Array(await file.arrayBuffer()); let binary=""; for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000)); const type=file.type.startsWith("image/")?"image":file.type.startsWith("audio/")?"audio":file.type.startsWith("video/")?"video":"document"; return {type,mime_type:file.type||"application/octet-stream",file_name:file.name,caption:"",data:btoa(binary)}; }
+function renderAttachmentPreview(){ if(!attachmentPreview)return; attachmentPreview.replaceChildren(...[...(messageAttachment?.files||[])].map(file=>{const el=document.createElement("span"); const icon=file.type.startsWith("image/")?"🖼️":file.type.startsWith("audio/")?"🎧":file.type.startsWith("video/")?"🎬":"📄"; el.textContent=`${icon} ${file.name} (${(file.size/1048576).toFixed(1)} MB)`; return el;})); }
+messageAttachment?.addEventListener("change",renderAttachmentPreview);
+emojiButton?.addEventListener("click",()=>emojiPanel?.classList.toggle("hidden"));
+emojiPanel?.addEventListener("click",event=>{if(event.target.tagName!=="SPAN")return; message.value+=event.target.textContent; message.dispatchEvent(new Event("input")); message.focus();});
 
 function conversationSignature(messages = []) {
   return messages.map((item) => `${item.seq}:${item.id}:${item.from_me ? 1 : 0}:${item.text || ""}:${item.media?.id || 0}`).join("|");
@@ -366,7 +373,7 @@ function openGroup(group) {
   document.querySelector("#groupStage").value=group.attendance_stage||"new"; document.querySelector("#groupPriority").value=group.priority||"normal";
 	document.querySelector("#groupLawyer").value=String(group.lawyer_id||0);
   document.querySelector("#groupUpdatedAt").textContent=`Atualizado em ${new Date(group.updated_at).toLocaleString("pt-BR")}`;
-  document.querySelector("#to").value=group.id; message.disabled=false; messageAttachment.disabled=false; sendButton.disabled=false;
+  document.querySelector("#to").value=group.id; message.disabled=false; messageAttachment.disabled=false; emojiButton.disabled=false; sendButton.disabled=false;
   document.querySelectorAll(".detail-tabs button").forEach((item,index)=>item.classList.toggle("active",index===0));
   document.querySelectorAll("[data-panel]").forEach((panel)=>panel.classList.toggle("hidden",panel.dataset.panel!=="group"));
   document.querySelectorAll("#groupList .contact-item").forEach((item)=>{ const selected=item.dataset.id===group.id; item.classList.toggle("active",selected); item.toggleAttribute("aria-current",selected); if(selected)item.classList.remove("incoming"); });
@@ -660,6 +667,7 @@ function openContact(contact = null) {
 	document.querySelector("#to").value = contact?.phone || "";
 	message.disabled = !contact;
 	messageAttachment.disabled = !contact;
+	emojiButton.disabled = !contact;
 	sendButton.disabled = !contact;
 	const history = document.querySelector("#historyContent");
 	history.innerHTML = contact ? `<div class="timeline-item"><strong>Primeiro contato</strong><br>${new Date(contact.first_contact_at).toLocaleString("pt-BR")}</div><div class="timeline-item"><strong>Última atividade</strong><br>${new Date(contact.last_contact_at).toLocaleString("pt-BR")}</div>` : "Salve o contato para iniciar o histórico.";
@@ -922,15 +930,15 @@ sendForm.addEventListener("submit", async (event) => {
   sendButton.disabled = true;
   sendButton.textContent = "Enviando...";
   try {
-	const media = await readAttachment(messageAttachment);
-	const queued = activeGroup
-	  ? await call("/api/group-send", { method: "POST", body: JSON.stringify({ group_id: activeGroup.id, text: message.value, ...(media ? {media} : {}) }) })
-	  : await call("/api/send", { method: "POST", body: JSON.stringify({ to: document.querySelector("#to").value.replace(/\D/g, ""), text: message.value, ...(media ? {media} : {}) }) });
-    showResult("Mensagem recebida pela fila. Aguardando o WhatsApp...");
-    const completed = await poll(queued.id);
-	showResult(`Mensagem enviada. ID: ${completed.message_id || "confirmado"}`);
+		const files = [...(messageAttachment?.files || [])];
+		if (!message.value.trim() && !files.length) throw new Error("escreva_uma_mensagem_ou_selecione_um_arquivo");
+		const sendOne = async (text, media) => { const queued = activeGroup ? await call("/api/group-send", { method: "POST", body: JSON.stringify({ group_id: activeGroup.id, text, ...(media ? {media} : {}) }) }) : await call("/api/send", { method: "POST", body: JSON.stringify({ to: document.querySelector("#to").value.replace(/\D/g, ""), text, ...(media ? {media} : {}) }) }); return poll(queued.id); };
+		if (message.value.trim()) await sendOne(message.value, null);
+		for (const file of files) await sendOne("", await readAttachment(file));
+		showResult(`Envio concluído: ${files.length} arquivo(s).`);
 	message.value = "";
 	messageAttachment.value = "";
+		renderAttachmentPreview();
     counter.textContent = "0 / 8000";
 	if (activeContact) await loadContactMessages(activeContact);
 	if (activeGroup) await loadGroupMessages(activeGroup);
