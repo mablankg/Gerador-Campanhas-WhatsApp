@@ -19,6 +19,13 @@ module.exports = async function handler(req, res) {
         const result = await upstream({ ...config, accountID: account }, `/v1/accounts/${account}/${action}`, { method: "POST", body: "{}" });
         return res.status(result.status).json(result.body);
       }
+      if (action === "rename") {
+        const account = String(req.body?.account || "");
+        const name = String(req.body?.name || "").trim();
+        if (!/^[a-z0-9][a-z0-9_-]{2,31}$/.test(account) || name.length < 2 || name.length > 60) return res.status(400).json({ error: "invalid_account" });
+        const result = await upstream({ ...config, accountID: account }, `/v1/accounts/${account}`, { method: "PATCH", body: JSON.stringify({ name }) });
+        return res.status(result.status).json(result.body);
+      }
       return res.status(400).json({ error: "invalid_action" });
     }
     if (req.method !== "GET") return res.status(405).json({ error: "method_not_allowed" });
