@@ -5,6 +5,7 @@ const contactsCard = document.querySelector("#contactsCard");
 const accessForm = document.querySelector("#accessForm");
 const sendForm = document.querySelector("#sendForm");
 const message = document.querySelector("#message");
+const messageAttachment = document.querySelector("#messageAttachment");
 const counter = document.querySelector("#counter");
 const result = document.querySelector("#result");
 const connection = document.querySelector("#connection");
@@ -83,6 +84,7 @@ function clearMediaObjectURLs() {
   for (const url of mediaObjectURLs) URL.revokeObjectURL(url);
   mediaObjectURLs = [];
 }
+async function readAttachment(input) { const file=input?.files?.[0]; if(!file)return null; if(file.size>25*1024*1024)throw new Error("arquivo_excede_25mb"); const bytes=new Uint8Array(await file.arrayBuffer()); let binary=""; for(let i=0;i<bytes.length;i+=0x8000)binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000)); const type=file.type.startsWith("image/")?"image":file.type.startsWith("audio/")?"audio":file.type.startsWith("video/")?"video":"document"; return {type,mime_type:file.type||"application/octet-stream",file_name:file.name,caption:"",data:btoa(binary)}; }
 
 function conversationSignature(messages = []) {
   return messages.map((item) => `${item.seq}:${item.id}:${item.from_me ? 1 : 0}:${item.text || ""}:${item.media?.id || 0}`).join("|");
@@ -919,13 +921,15 @@ sendForm.addEventListener("submit", async (event) => {
   sendButton.disabled = true;
   sendButton.textContent = "Enviando...";
   try {
+	const media = await readAttachment(messageAttachment);
 	const queued = activeGroup
-	  ? await call("/api/group-send", { method: "POST", body: JSON.stringify({ group_id: activeGroup.id, text: message.value }) })
-	  : await call("/api/send", { method: "POST", body: JSON.stringify({ to: document.querySelector("#to").value.replace(/\D/g, ""), text: message.value }) });
+	  ? await call("/api/group-send", { method: "POST", body: JSON.stringify({ group_id: activeGroup.id, text: message.value, ...(media ? {media} : {}) }) })
+	  : await call("/api/send", { method: "POST", body: JSON.stringify({ to: document.querySelector("#to").value.replace(/\D/g, ""), text: message.value, ...(media ? {media} : {}) }) });
     showResult("Mensagem recebida pela fila. Aguardando o WhatsApp...");
     const completed = await poll(queued.id);
 	showResult(`Mensagem enviada. ID: ${completed.message_id || "confirmado"}`);
 	message.value = "";
+	messageAttachment.value = "";
     counter.textContent = "0 / 8000";
 	if (activeContact) await loadContactMessages(activeContact);
 	if (activeGroup) await loadGroupMessages(activeGroup);

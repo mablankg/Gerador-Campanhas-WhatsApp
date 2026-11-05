@@ -59,7 +59,8 @@
           <div class="message-thread" id="messageThread"><div class="empty-conversation">Selecione um contato para visualizar as mensagens.</div></div>
           <form class="message-composer" id="sendForm">
             <input id="to" type="hidden" />
-            <textarea id="message" rows="2" maxlength="8000" placeholder="Digite uma mensagem..." required disabled></textarea>
+            <textarea id="message" rows="2" maxlength="8000" placeholder="Digite uma mensagem..." disabled></textarea>
+            <input id="messageAttachment" type="file" accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" disabled />
             <div class="composer-actions"><small id="counter">0 / 8000</small><button id="sendButton" type="submit" disabled>Enviar</button></div>
           </form>
           <div class="result hidden" id="result" role="status" aria-live="polite"></div>
@@ -125,7 +126,7 @@
               <select id="groupSelect" required><option value="">Carregando grupos...</option></select>
             </label>
             <label>Mensagem
-              <textarea id="groupMessage" rows="5" maxlength="8000" required></textarea>
+              <textarea id="groupMessage" rows="5" maxlength="8000"></textarea><input id="groupAttachment" type="file" accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" />
             </label>
             <button id="groupSendButton" type="submit">Enviar para o grupo</button>
           </form>
