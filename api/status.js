@@ -7,6 +7,10 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === "POST") {
       const action = String(req.body?.action || "");
+      if (action === "reset_directory") {
+        const result = await upstream(config, "/v1/directory/reset", { method: "POST", body: "{}" });
+        return res.status(result.status).json(result.body);
+      }
       if (action === "create") {
         const name = String(req.body?.name || "").trim();
         if (name.length < 2 || name.length > 60) return res.status(400).json({ error: "invalid_account" });
