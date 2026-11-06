@@ -23,6 +23,12 @@ module.exports = async function handler(req, res) {
         const result = await upstream({ ...config, accountID: account }, `/v1/accounts/${account}/${action}`, { method: "POST", body: "{}" });
         return res.status(result.status).json(result.body);
       }
+      if (action === "delete") {
+        const account = String(req.body?.account || "");
+        if (!/^[a-z0-9][a-z0-9_-]{2,31}$/.test(account) || req.body?.confirm !== true) return res.status(400).json({error:"confirmation_required"});
+        const result = await upstream({...config, accountID:account}, `/v1/accounts/${account}`, {method:"DELETE",body:JSON.stringify({confirm:true})});
+        return res.status(result.status).json(result.body);
+      }
       if (action === "rename") {
         const account = String(req.body?.account || "");
         const name = String(req.body?.name || "").trim();
