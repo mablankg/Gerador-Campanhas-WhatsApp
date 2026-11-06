@@ -189,6 +189,7 @@ async function loadAccounts() {
   const select = document.querySelector("#accountSelect");
   select.replaceChildren(...whatsappAccounts.map((item) => new Option(`${item.name}${item.phone ? ` · ${formatPhone(item.phone)}` : ""}`, item.id)));
   select.value = activeAccountID;
+  localStorage.setItem("blank_whatsapp_account", activeAccountID);
   renderAccountList();
 }
 
@@ -270,7 +271,13 @@ async function switchAccount(id) {
 }
 
 async function unlock() {
-  if (!accessToken || !(await status())) return;
+  if (!accessToken) return;
+  try { await loadAccounts(); } catch (error) {
+    connection.className = "connection offline";
+    connection.querySelector("b").textContent = error.status === 401 ? "Acesso necessário" : "API indisponível";
+    return;
+  }
+  if (whatsappAccounts.length && !(await status())) return;
   document.body.classList.remove("auth-locked");
   accessCard.classList.add("hidden");
   composer.classList.remove("hidden");
@@ -743,12 +750,7 @@ accessForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   accessToken = accessTokenInput.value;
   localStorage.setItem("campaign_access", accessToken);
-  if (!(await status())) return showResult("Senha de acesso inválida ou serviço indisponível.", true);
-  accessCard.classList.add("hidden");
-  composer.classList.remove("hidden");
-  contactsCard.classList.remove("hidden");
-	await loadLawyers(); await Promise.all([loadGroups(), loadContacts()]);
-	startLiveRefresh();
+  try { await unlock(); } catch (error) { showResult(`Não foi possível abrir o painel: ${error.message}`, true); }
 });
 
 let contactSearchTimer;
