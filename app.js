@@ -207,7 +207,20 @@ function renderAccountList() {
     action.addEventListener("click", () => account.status === "connected" ? disconnectAccount(account) : connectAccount(account));
     const rename = document.createElement("button"); rename.type = "button"; rename.className = "secondary"; rename.textContent = "Renomear";
     rename.addEventListener("click", () => renameAccount(account));
-    row.append(info, state, rename, action); list.append(row);
+    const remove = document.createElement("button"); remove.type="button"; remove.className="secondary"; remove.textContent="Excluir conexão";
+    remove.addEventListener("click", async () => {
+      if (!window.confirm(`Excluir a conexão “${account.name}” e todos os dados vinculados? Contatos, grupos, mensagens, anexos e comentários serão apagados permanentemente. Esta ação não pode ser desfeita.`)) return;
+      remove.disabled=true;
+      try {
+        const queued=await call("/api/status",{method:"POST",body:JSON.stringify({action:"delete",account:account.id,confirm:true})});
+        await poll(queued.id, account.id);
+        await loadAccounts();
+        await switchAccount(activeAccountID);
+        showAccountResult("Conexão e dados vinculados excluídos.");
+      } catch(error) { showAccountResult(`Não foi possível excluir: ${error.message}`,true); }
+      finally { remove.disabled=false; }
+    });
+    row.append(info, state, rename, action, remove); list.append(row);
   }
 }
 
@@ -307,10 +320,10 @@ function startLiveRefresh() {
   }, 3000);
 }
 
-async function poll(id) {
+async function poll(id, accountID = activeAccountID) {
   for (let attempt = 0; attempt < 45; attempt += 1) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    const command = await call(`/api/command?id=${encodeURIComponent(id)}`);
+    const command = await call(`/api/command?id=${encodeURIComponent(id)}`, {headers:{"x-whatsapp-account":accountID}});
     if (command.status === "done") return command.result || {};
     if (["failed", "unknown"].includes(command.status)) throw new Error(command.result?.error || command.status);
   }
