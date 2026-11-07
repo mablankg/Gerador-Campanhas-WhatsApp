@@ -124,7 +124,9 @@ function shouldKeepRenderedConversation(key, messages, silent) {
 
 async function appendMessageMedia(bubble, media) {
   if (!media?.id) return;
-  const response = await fetch(`/api/media?id=${encodeURIComponent(media.id)}`, { headers: { "x-app-token": accessToken } });
+  const response = await fetch(`/api/media?id=${encodeURIComponent(media.id)}`, {
+    headers: { "x-app-token": accessToken, "x-whatsapp-account": activeAccountID }
+  });
   if (!response.ok) {
     const unavailable = document.createElement("small"); unavailable.className = "media-unavailable"; unavailable.textContent = "Anexo indisponível"; bubble.append(unavailable); return;
   }
