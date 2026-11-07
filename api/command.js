@@ -22,6 +22,7 @@ async function proxyProcessRequest(req, res, config, action) {
     processes: ["GET", "POST", "PATCH"],
     "process-links": ["GET", "POST", "DELETE"],
     "process-settings": ["GET", "PATCH"],
+    tasks: ["GET", "POST", "PATCH", "DELETE"],
   };
   if (!allowed[action]?.includes(req.method)) {
     res.setHeader("Allow", (allowed[action] || []).join(", "));
@@ -35,7 +36,7 @@ async function proxyProcessRequest(req, res, config, action) {
   const id = String(req.query?.id || "").trim();
   if (id && !/^\d+$/.test(id)) return res.status(400).json({ error: "invalid_process_id" });
   const suffix = query.size ? `?${query}` : "";
-  const path = `/v1/${action}${action === "processes" && id ? `/${id}` : ""}${suffix}`;
+  const path = `/v1/${action}${["processes", "tasks"].includes(action) && id ? `/${id}` : ""}${suffix}`;
   try {
     const init = req.method === "GET" ? { method: "GET" } : { method: req.method, body: JSON.stringify(req.body || {}) };
     const result = await upstream(config, path, init);

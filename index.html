@@ -119,7 +119,17 @@
               </details>
               <div class="result hidden" id="processResult" role="status" aria-live="polite"></div>
             </section>
-            <section class="detail-panel hidden" data-panel="tasks"><h3>Tarefas e agenda</h3><p class="muted">Área preparada para compromissos, retornos e prazos do contato.</p><label>Nova tarefa<input id="taskTitle" placeholder="Ex.: Retornar ligação" /></label><label>Data e hora<input id="taskDue" type="datetime-local" /></label><button id="addTask" type="button" disabled>Adicionar tarefa</button></section>
+            <section class="detail-panel hidden" data-panel="tasks">
+              <h3>Tarefas e agenda</h3>
+              <p class="muted">Compromissos, retornos e prazos do contato ou grupo.</p>
+              <form id="taskForm">
+                <label>Nova tarefa<input id="taskTitle" maxlength="300" required placeholder="Ex.: Retornar ligação" /></label>
+                <label>Data e hora<input id="taskDue" type="datetime-local" required /></label>
+                <button id="addTask" type="submit">Adicionar tarefa</button>
+              </form>
+              <div class="task-list" id="taskList"></div>
+              <div class="result hidden" id="taskResult" role="status" aria-live="polite"></div>
+            </section>
             <div class="contact-empty" id="contactEmpty"><p>Selecione um contato ou crie um novo cadastro.</p></div>
           </div>
           <div class="result hidden" id="contactResult" role="status" aria-live="polite"></div>

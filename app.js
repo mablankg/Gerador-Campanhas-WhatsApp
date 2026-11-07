@@ -520,6 +520,55 @@ function processEndpoint(action, parameters = {}) {
   return `/api/command?${query}`;
 }
 
+function taskEndpoint(parameters = {}, id = "") {
+  const query = new URLSearchParams({ action: "tasks" });
+  if (id) query.set("id", String(id));
+  for (const [key, value] of Object.entries(parameters)) if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+  return `/api/command?${query}`;
+}
+
+function showTaskResult(text, error = false) {
+  const box = document.querySelector("#taskResult");
+  box.textContent = text;
+  box.classList.remove("hidden", "error");
+  if (error) box.classList.add("error");
+}
+
+function renderTasks(tasks = []) {
+  const list = document.querySelector("#taskList");
+  list.replaceChildren();
+  if (!tasks.length) {
+    const empty = document.createElement("p"); empty.className = "muted"; empty.textContent = activeEntity() ? "Nenhuma tarefa cadastrada." : "Selecione um contato ou grupo."; list.append(empty); return;
+  }
+  for (const task of tasks) {
+    const card = document.createElement("article"); card.className = `task-card${task.status === "done" ? " completed" : ""}`;
+    const check = document.createElement("input"); check.type = "checkbox"; check.checked = task.status === "done"; check.title = check.checked ? "Reabrir tarefa" : "Concluir tarefa";
+    const content = document.createElement("div"); const title = document.createElement("strong"); title.textContent = task.title;
+    const due = document.createElement("small"); due.textContent = new Date(task.due_at).toLocaleString("pt-BR"); content.append(title, due);
+    const remove = document.createElement("button"); remove.type = "button"; remove.className = "task-delete"; remove.textContent = "Excluir";
+    check.addEventListener("change", async () => {
+      try { await call(taskEndpoint({}, task.id), { method: "PATCH", body: JSON.stringify({ status: check.checked ? "done" : "pending" }) }); await loadTasks(); }
+      catch (error) { check.checked = !check.checked; showTaskResult(`Não foi possível atualizar: ${error.message}`, true); }
+    });
+    remove.addEventListener("click", async () => {
+      if (!confirm("Excluir esta tarefa?")) return;
+      try { await call(taskEndpoint({}, task.id), { method: "DELETE", body: "{}" }); await loadTasks(); showTaskResult("Tarefa excluída."); }
+      catch (error) { showTaskResult(`Não foi possível excluir: ${error.message}`, true); }
+    });
+    card.append(check, content, remove); list.append(card);
+  }
+}
+
+async function loadTasks() {
+  const entity = activeEntity();
+  document.querySelector("#addTask").disabled = !entity;
+  if (!entity) { renderTasks([]); return; }
+  try {
+    const data = await call(taskEndpoint({ entity_type: entity.type, entity_id: entity.id }));
+    renderTasks(data.tasks || []);
+  } catch (error) { renderTasks([]); showTaskResult(`Não foi possível carregar as tarefas: ${error.message}`, true); }
+}
+
 function showProcessResult(text, error = false) {
   const box = document.querySelector("#processResult");
   box.textContent = text;
@@ -1085,6 +1134,7 @@ document.querySelectorAll(".detail-tabs button").forEach((button) => button.addE
   contactEmpty.classList.toggle("hidden", Boolean(activeContact) || button.dataset.tab !== "contact");
 	if(button.dataset.tab==="history") loadComments();
 	if(button.dataset.tab==="process") loadProcesses();
+	if(button.dataset.tab==="tasks") loadTasks();
 }));
 
 document.querySelector("#refreshProcesses")?.addEventListener("click", loadProcesses);
@@ -1109,6 +1159,20 @@ document.querySelector("#processForm")?.addEventListener("submit", async event =
     await linkSelectedProcess(created.id); event.currentTarget.reset(); document.querySelector("#processStatus").value = "active";
     showProcessResult("Processo criado e vinculado com sucesso.");
   } catch (error) { showProcessResult(`Não foi possível criar o processo: ${error.message}`, true); }
+});
+
+document.querySelector("#taskForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  const entity = activeEntity(); const button = document.querySelector("#addTask");
+  const title = document.querySelector("#taskTitle").value.trim(); const dueValue = document.querySelector("#taskDue").value;
+  if (!entity) return showTaskResult("Selecione um contato ou grupo.", true);
+  if (!title || !dueValue) return showTaskResult("Informe a tarefa e a data.", true);
+  const original = button.textContent; button.disabled = true; button.textContent = "Adicionando...";
+  try {
+    await call(taskEndpoint({ entity_type: entity.type, entity_id: entity.id }), { method: "POST", body: JSON.stringify({ title, due_at: new Date(dueValue).toISOString() }) });
+    event.currentTarget.reset(); await loadTasks(); showTaskResult("Tarefa adicionada com sucesso.");
+  } catch (error) { showTaskResult(`Não foi possível adicionar: ${error.message}`, true); }
+  finally { button.disabled = false; button.textContent = original; }
 });
 
 document.querySelector("#commentForm").addEventListener("submit",async(event)=>{
