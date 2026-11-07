@@ -17,4 +17,8 @@ const path = "index.html";
 const html = fs.readFileSync(path, "utf8");
 const marker = /(<small id="releaseInfo"[^>]*>)[^<]*(<\/small>)/;
 if (!marker.test(html)) throw new Error("Indicador de versão ausente");
-fs.writeFileSync(path, html.replace(marker, (_, start, end) => start + "Versão " + version + "+" + suffix + " · Publicação " + date + end));
+fs.mkdirSync("public", { recursive: true });
+for (const asset of ["app.js", "styles.css"]) {
+  fs.copyFileSync(asset, "public/" + asset);
+}
+fs.writeFileSync("public/index.html", html.replace(marker, (_, start, end) => start + "Versão " + version + "+" + suffix + " · Publicação " + date + end));
