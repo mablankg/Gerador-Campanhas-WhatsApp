@@ -321,3 +321,5 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .emoji-panel span { cursor: pointer; }
 
 
+
+.contact-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;float:right;margin-left:8px;border:1px solid #cfe3d8}\n
