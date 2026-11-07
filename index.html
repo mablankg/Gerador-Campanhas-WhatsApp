@@ -38,18 +38,14 @@
       <section class="service-workspace hidden" id="contactsCard">
         <aside class="contact-rail" id="contactRail">
           <div class="rail-heading"><div><p class="eyebrow">CRM</p><h2>Contatos</h2></div><button class="icon-button" id="toggleContactRail" type="button" title="Recolher contatos">‹</button></div>
-          <div class="crm-mode-tabs"><button class="active" id="contactsModeTab" type="button">Contatos</button><button id="groupsModeTab" type="button">Grupos</button></div>
+          <select id="conversationKind" aria-label="Tipo de conversa"><option value="">Todas as conversas</option><option value="contact">Contatos</option><option value="group">Grupos</option></select>
           <div id="contactsMode">
-            <div class="rail-actions"><button class="secondary" id="syncContacts" type="button">Atualizar</button><button id="newContact" type="button">Novo</button></div><button class="directory-reset secondary" id="resetDirectory" type="button">Zerar base</button>
+            <div class="rail-actions"><button class="secondary" id="syncContacts" type="button">Atualizar</button><button id="newContact" type="button">Novo contato</button><button id="newGroupRail" type="button">Novo grupo</button></div><button class="directory-reset secondary" id="resetDirectory" type="button">Zerar base</button>
             <input id="contactSearch" type="search" placeholder="Nome, apelido ou telefone" />
             <div class="contact-filters"><select id="contactTypeFilter"><option value="">Todos os tipos</option><option value="lead">Lead</option><option value="client">Cliente</option><option value="partner">Parceiro</option><option value="other">Outro</option></select><select id="contactStatusFilter"><option value="">Todos os status</option><option value="active">Ativo</option><option value="waiting">Aguardando</option><option value="finished">Finalizado</option></select><select id="contactStageFilter"><option value="all">Todas as etapas</option><option value="none">Sem etapa</option></select></div>
             <div class="contact-list" id="contactList"><p class="muted">Carregando contatos...</p></div>
           </div>
-          <div class="hidden" id="groupsMode">
-            <div class="rail-actions"><button class="secondary" id="syncGroupsRail" type="button">Atualizar</button><button id="newGroupRail" type="button">Novo</button></div>
-            <input id="groupSearch" type="search" placeholder="Buscar grupo" />
-            <div class="contact-list" id="groupList"><p class="muted">Carregando grupos...</p></div>
-          </div>
+          
         </aside>
 
         <div class="panel-resizer panel-resizer-left" id="leftPanelResizer" role="separator" aria-orientation="vertical" aria-label="Ajustar largura da lista"></div>
