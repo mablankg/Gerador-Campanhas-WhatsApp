@@ -509,6 +509,75 @@ async function loadComments() {
   }catch(error){content.textContent=`Não foi possível carregar os comentários: ${error.message}`;}
 }
 
+const processStatusLabels = { active: "Ativo", suspended: "Suspenso", closed: "Encerrado", archived: "Arquivado" };
+
+function processEndpoint(action, parameters = {}) {
+  const query = new URLSearchParams({ action });
+  for (const [key, value] of Object.entries(parameters)) if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+  return `/api/command?${query}`;
+}
+
+function showProcessResult(text, error = false) {
+  const box = document.querySelector("#processResult");
+  box.textContent = text;
+  box.classList.remove("hidden", "error");
+  if (error) box.classList.add("error");
+}
+
+function renderLinkedProcesses(processes = []) {
+  const list = document.querySelector("#linkedProcessList");
+  const empty = document.querySelector("#processEmpty");
+  list.replaceChildren();
+  empty.classList.toggle("hidden", processes.length > 0);
+  if (!processes.length) empty.textContent = activeEntity() ? "Nenhum processo vinculado." : "Selecione um contato ou grupo.";
+  for (const process of processes) {
+    const card = document.createElement("article"); card.className = "process-card";
+    const heading = document.createElement("div"); heading.className = "process-card-heading";
+    const title = document.createElement("strong"); title.textContent = process.title;
+    const status = document.createElement("span"); status.className = `process-status status-${process.status}`; status.textContent = processStatusLabels[process.status] || process.status;
+    heading.append(title, status); card.append(heading);
+    if (process.case_number) { const number = document.createElement("div"); number.className = "process-number"; number.textContent = process.case_number; card.append(number); }
+    if (process.client_name) { const client = document.createElement("small"); client.textContent = `Cliente: ${process.client_name}`; card.append(client); }
+    const actions = document.createElement("div"); actions.className = "process-card-actions";
+    if (process.drive_folder_url) { const drive = document.createElement("a"); drive.href = process.drive_folder_url; drive.target = "_blank"; drive.rel = "noopener"; drive.textContent = "Abrir pasta no Drive"; actions.append(drive); }
+    const unlink = document.createElement("button"); unlink.type = "button"; unlink.className = "secondary"; unlink.textContent = "Desvincular";
+    unlink.addEventListener("click", () => unlinkProcess(process.id)); actions.append(unlink); card.append(actions); list.append(card);
+  }
+}
+
+async function loadProcesses() {
+  const entity = activeEntity();
+  if (!entity) { renderLinkedProcesses([]); return; }
+  try {
+    const [all, linked] = await Promise.all([
+      call(processEndpoint("processes")),
+      call(processEndpoint("process-links", { entity_type: entity.type, entity_id: entity.id })),
+    ]);
+    const linkedIDs = new Set((linked.processes || []).map(item => String(item.id)));
+    const select = document.querySelector("#processSelect"); select.replaceChildren(new Option("Selecione...", ""));
+    for (const process of all.processes || []) if (!linkedIDs.has(String(process.id))) select.append(new Option(`${process.case_number ? `${process.case_number} · ` : ""}${process.title}`, process.id));
+    renderLinkedProcesses(linked.processes || []);
+  } catch (error) {
+    renderLinkedProcesses([]); showProcessResult(`Não foi possível carregar os processos: ${error.message}`, true);
+  }
+}
+
+async function linkSelectedProcess(processID) {
+  const entity = activeEntity();
+  if (!entity || !processID) return;
+  await call(processEndpoint("process-links", { entity_type: entity.type, entity_id: entity.id }), { method: "POST", body: JSON.stringify({ process_id: Number(processID) }) });
+  await loadProcesses(); showProcessResult("Processo vinculado com sucesso.");
+}
+
+async function unlinkProcess(processID) {
+  const entity = activeEntity();
+  if (!entity || !confirm("Desvincular este processo deste contato ou grupo?")) return;
+  try {
+    await call(processEndpoint("process-links", { entity_type: entity.type, entity_id: entity.id, process_id: processID }), { method: "DELETE" });
+    await loadProcesses(); showProcessResult("Vínculo removido.");
+  } catch (error) { showProcessResult(`Não foi possível remover o vínculo: ${error.message}`, true); }
+}
+
 function showContactResult(text, error = false) {
   contactResult.textContent = text;
   contactResult.classList.remove("hidden", "error");
@@ -982,7 +1051,32 @@ document.querySelectorAll(".detail-tabs button").forEach((button) => button.addE
   document.querySelectorAll("[data-panel]").forEach((panel) => panel.classList.toggle("hidden", panel.dataset.panel !== button.dataset.tab));
   contactEmpty.classList.toggle("hidden", Boolean(activeContact) || button.dataset.tab !== "contact");
 	if(button.dataset.tab==="history") loadComments();
+	if(button.dataset.tab==="process") loadProcesses();
 }));
+
+document.querySelector("#refreshProcesses")?.addEventListener("click", loadProcesses);
+document.querySelector("#linkProcess")?.addEventListener("click", async () => {
+  const select = document.querySelector("#processSelect");
+  if (!select.value) return showProcessResult("Selecione um processo.", true);
+  try { await linkSelectedProcess(select.value); } catch (error) { showProcessResult(`Não foi possível vincular: ${error.message}`, true); }
+});
+document.querySelector("#processForm")?.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (!activeEntity()) return showProcessResult("Selecione um contato ou grupo.", true);
+  const payload = {
+    case_number: document.querySelector("#processCaseNumber").value.trim(),
+    title: document.querySelector("#processTitle").value.trim(),
+    client_name: document.querySelector("#processClientName").value.trim(),
+    status: document.querySelector("#processStatus").value,
+    drive_folder_url: document.querySelector("#processDriveFolder").value.trim(),
+    notes: document.querySelector("#processNotes").value.trim(),
+  };
+  try {
+    const created = await call(processEndpoint("processes"), { method: "POST", body: JSON.stringify(payload) });
+    await linkSelectedProcess(created.id); event.currentTarget.reset(); document.querySelector("#processStatus").value = "active";
+    showProcessResult("Processo criado e vinculado com sucesso.");
+  } catch (error) { showProcessResult(`Não foi possível criar o processo: ${error.message}`, true); }
+});
 
 document.querySelector("#commentForm").addEventListener("submit",async(event)=>{
   event.preventDefault(); const entity=activeEntity(); const body=document.querySelector("#commentBody"); if(!entity||!body.value.trim())return;

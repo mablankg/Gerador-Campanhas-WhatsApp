@@ -97,7 +97,28 @@
             </form>
             <section class="detail-panel hidden" data-panel="group" id="groupDetail"><h3 id="groupDetailName">Grupo</h3><label>Nome<input id="groupDetailNameField" readonly /></label><label>Participantes<input id="groupParticipantCount" readonly /></label><label>Tópico<textarea id="groupTopic" readonly></textarea></label><label>Tipo<input id="groupAnnounce" readonly /></label><div class="contact-fields"><label>Etapa<select id="groupStage"></select></label><label>Importância<select id="groupPriority"><option value="low">Baixa</option><option value="normal">Normal</option><option value="high">Alta</option><option value="urgent">Urgente</option></select></label></div><label>Advogado responsável<select id="groupLawyer"><option value="0">Sem advogado</option></select></label><button id="saveGroupClassification" type="button">Salvar classificação</button><small id="groupUpdatedAt" class="muted"></small></section>
             <section class="detail-panel hidden" data-panel="history" id="historyPanel"><h3>Histórico de comentários</h3><form id="commentForm"><label>Novo comentário<textarea id="commentBody" rows="3" maxlength="8000" placeholder="Registre uma observação interna..."></textarea></label><button type="submit">Adicionar comentário</button></form><div id="historyContent" class="timeline muted">Selecione um contato ou grupo.</div></section>
-            <section class="detail-panel hidden" data-panel="process"><h3>Processo</h3><p class="muted">A vinculação de processos será adicionada na próxima etapa.</p><button type="button" disabled>Vincular processo</button></section>
+            <section class="detail-panel hidden process-panel" data-panel="process" id="processPanel">
+              <div class="process-heading"><h3>Processos</h3><button class="secondary" id="refreshProcesses" type="button">Atualizar</button></div>
+              <p class="muted" id="processEmpty">Selecione um contato ou grupo.</p>
+              <div class="process-list" id="linkedProcessList"></div>
+              <div class="process-link-box">
+                <label>Vincular processo existente<select id="processSelect"><option value="">Selecione...</option></select></label>
+                <button id="linkProcess" type="button">Vincular</button>
+              </div>
+              <details class="process-create">
+                <summary>Cadastrar novo processo</summary>
+                <form id="processForm">
+                  <label>Número do processo<input id="processCaseNumber" maxlength="80" placeholder="Ex.: 0000000-00.2026.8.26.0000" /></label>
+                  <label>Título<input id="processTitle" maxlength="200" required placeholder="Assunto ou identificação" /></label>
+                  <label>Cliente<input id="processClientName" maxlength="160" /></label>
+                  <label>Status<select id="processStatus"><option value="active">Ativo</option><option value="suspended">Suspenso</option><option value="closed">Encerrado</option><option value="archived">Arquivado</option></select></label>
+                  <label>Pasta do Google Drive<input id="processDriveFolder" type="url" placeholder="https://drive.google.com/drive/folders/..." /></label>
+                  <label>Observações<textarea id="processNotes" rows="3" maxlength="10000"></textarea></label>
+                  <button type="submit">Criar e vincular</button>
+                </form>
+              </details>
+              <div class="result hidden" id="processResult" role="status" aria-live="polite"></div>
+            </section>
             <section class="detail-panel hidden" data-panel="tasks"><h3>Tarefas e agenda</h3><p class="muted">Área preparada para compromissos, retornos e prazos do contato.</p><label>Nova tarefa<input id="taskTitle" placeholder="Ex.: Retornar ligação" /></label><label>Data e hora<input id="taskDue" type="datetime-local" /></label><button id="addTask" type="button" disabled>Adicionar tarefa</button></section>
             <div class="contact-empty" id="contactEmpty"><p>Selecione um contato ou crie um novo cadastro.</p></div>
           </div>
