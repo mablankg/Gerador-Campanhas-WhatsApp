@@ -685,7 +685,7 @@ function renderSelectedContactPhoto(contact) {
     photo.src = contact.avatar_url;
     photo.addEventListener("error", () => button.remove());
     button.append(photo);
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       const dialog = document.createElement("dialog");
       dialog.setAttribute("aria-label", "Foto de " + name);
       dialog.style.cssText = "border:0;border-radius:16px;padding:16px;max-width:90vw;text-align:center";
@@ -701,6 +701,19 @@ function renderSelectedContactPhoto(contact) {
       dialog.addEventListener("close", () => dialog.remove(), { once: true });
       document.body.append(dialog);
       dialog.showModal();
+      try {
+        const response = await fetch(`/api/media?kind=avatar&id=${encodeURIComponent(contact.id)}`, {
+          headers: { "x-app-token": accessToken, "x-whatsapp-account": activeAccountID }
+        });
+        if (!response.ok) return;
+        const blob = await response.blob();
+        if (!dialog.open || !["image/jpeg", "image/png", "image/webp"].includes(blob.type)) return;
+        const url = URL.createObjectURL(blob);
+        dialog.addEventListener("close", () => URL.revokeObjectURL(url), { once: true });
+        image.src = url;
+      } catch {
+        // Keep the thumbnail available when the full-size photo cannot be loaded.
+      }
     });
     title.before(button);
   }
