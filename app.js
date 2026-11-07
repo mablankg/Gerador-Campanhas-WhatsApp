@@ -551,6 +551,7 @@ function renderTasks(tasks = []) {
     if (task.description) { const description = document.createElement("span"); description.textContent = task.description; content.append(description); }
     if (task.link_url) { const link = document.createElement("a"); link.href = task.link_url; link.target = "_blank"; link.rel = "noopener"; link.textContent = "Abrir link"; content.append(link); }
     if (task.attachment?.file_name) { const attachment = document.createElement("small"); attachment.textContent = `Anexo: ${task.attachment.file_name}`; content.append(attachment); }
+    if (task.whatsapp_device_jid) { const sender = document.createElement("small"); sender.textContent = `Envio por: ${task.whatsapp_account_name || "WhatsApp"} · ${task.whatsapp_device_jid.split("@")[0]}`; content.append(sender); }
     content.append(due);
     if (task.delivery_error) { const failure = document.createElement("small"); failure.className = "task-error"; failure.textContent = task.delivery_error; content.append(failure); }
     const remove = document.createElement("button"); remove.type = "button"; remove.className = "task-delete"; remove.textContent = "Excluir";
