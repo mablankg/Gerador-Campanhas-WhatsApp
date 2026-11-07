@@ -265,6 +265,7 @@ function showAccountResult(text, error = false) {
 
 async function switchAccount(id) {
   activeAccountID = id; localStorage.setItem("blank_whatsapp_account", id);
+  renderSelectedContactPhoto(null);
   activeContact = null; activeGroup = null; allContacts = []; allGroups = []; unreadContacts.clear(); unreadGroups.clear(); messageEventCursor = "latest"; renderedConversationKey = "";
   document.querySelector("#messageThread").innerHTML = '<div class="empty-conversation">Selecione um contato para visualizar as mensagens.</div>';
   await status(); await Promise.all([loadGroups(), loadContacts()]);
@@ -391,6 +392,7 @@ async function loadGroupMessages(group, silent = false) {
 }
 
 function openGroup(group) {
+  renderSelectedContactPhoto(null);
   unreadGroups.delete(group.id);
   activeGroup=group; activeContact=null; contactForm.classList.add("hidden"); contactEmpty.classList.add("hidden");
   document.querySelector("#conversationName").textContent=group.name; document.querySelector("#conversationPhone").textContent=`${group.participant_count} participantes`;
@@ -660,7 +662,52 @@ async function loadContactMessages(contact, silent = false) {
   }
 }
 
+function renderSelectedContactPhoto(contact) {
+  for (const id of ["conversationName", "contactFormTitle"]) {
+    const title = document.getElementById(id);
+    if (!title) continue;
+    const current = title.previousElementSibling;
+    const existing = current?.classList.contains("selected-contact-photo") ? current : null;
+    if (existing && existing.dataset.src === contact?.avatar_url && existing.title === contactDisplayName(contact)) continue;
+    existing?.remove();
+    if (!contact?.avatar_url) continue;
+    const name = contactDisplayName(contact);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "selected-contact-photo";
+    button.dataset.src = contact.avatar_url;
+    button.title = name;
+    button.setAttribute("aria-label", "Ampliar foto de " + name);
+    button.style.cssText = "float:left;width:38px;height:38px;padding:0;margin:0 10px 4px 0;border:0;border-radius:50%;overflow:hidden;cursor:zoom-in";
+    const photo = document.createElement("img");
+    photo.alt = "";
+    photo.style.cssText = "width:100%;height:100%;object-fit:cover;display:block";
+    photo.src = contact.avatar_url;
+    photo.addEventListener("error", () => button.remove());
+    button.append(photo);
+    button.addEventListener("click", () => {
+      const dialog = document.createElement("dialog");
+      dialog.setAttribute("aria-label", "Foto de " + name);
+      dialog.style.cssText = "border:0;border-radius:16px;padding:16px;max-width:90vw;text-align:center";
+      const close = document.createElement("button");
+      close.type = "button";
+      close.textContent = "Fechar";
+      close.addEventListener("click", () => dialog.close());
+      const image = document.createElement("img");
+      image.alt = name;
+      image.src = photo.src;
+      image.style.cssText = "display:block;width:min(360px,75vw);max-height:65vh;object-fit:contain;margin:0 auto 12px";
+      dialog.append(image, close);
+      dialog.addEventListener("close", () => dialog.remove(), { once: true });
+      document.body.append(dialog);
+      dialog.showModal();
+    });
+    title.before(button);
+  }
+}
+
 function openContact(contact = null) {
+  renderSelectedContactPhoto(contact);
   if (contact) unreadContacts.delete(String(contact.id));
   activeContact = contact;
 	activeGroup = null;
@@ -737,6 +784,7 @@ async function loadContacts(query = "", silent = false) {
     const data = await call(`/api/contacts?${params.toString()}`);
 		allContacts = data.contacts || [];
 		if (activeContact) activeContact = allContacts.find((item) => String(item.id) === String(activeContact.id)) || activeContact;
+		renderSelectedContactPhoto(activeContact);
 		renderContacts();
 		if (!kanbanBoard.classList.contains("hidden")) renderKanban();
 		if (!document.querySelector("#lawyerBoard").classList.contains("hidden")) renderLawyerBoard();
