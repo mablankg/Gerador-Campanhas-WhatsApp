@@ -348,3 +348,31 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Keep the conversation list within the available height of the rail. */
+.contact-rail:not(.collapsed), #contactsMode {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.contact-rail > .rail-heading, .conversation-controls { flex: none; }
+#contactsMode { flex: 1; }
+#contactsMode .contact-list {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+.conversation-controls > summary {
+  cursor: pointer;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+.conversation-controls > #conversationKind { width: 100%; }
+#groupUpdatedAt {
+  display: block;
+  margin-top: 6px;
+}
