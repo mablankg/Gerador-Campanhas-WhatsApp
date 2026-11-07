@@ -720,6 +720,7 @@ function renderContacts() {
 		button.style.setProperty("--stage-color", stage?.[2] || "#9aa8a0");
 		if (String(activeContact?.id || "") === String(contact.id)) button.setAttribute("aria-current", "true");
 		const name = document.createElement("strong"); name.textContent = contactDisplayName(contact);
+		if (contact.avatar_url) { const avatar = document.createElement("img"); avatar.className = "contact-avatar"; avatar.alt = ""; avatar.loading = "lazy"; avatar.src = contact.avatar_url; avatar.addEventListener("error", () => avatar.remove()); button.append(avatar); }
 		const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${formatPhone(contact.phone)} · ${contact.contact_type || "lead"} · ${contact.status || "active"}`;
 		button.append(name, detail); if(contact.lawyer_name)button.append(createLawyerTag(contact));
 		const workflow = document.createElement("small"); workflow.className = `contact-workflow priority-${contact.priority || "normal"}`; workflow.style.borderLeftColor = stage?.[2] || "#9aa8a0"; workflow.textContent = `${stage?.[1] || "Sem etapa"} · ${priorityLabels[contact.priority || "normal"]}`; button.append(workflow);
