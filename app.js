@@ -159,6 +159,52 @@ function appendTextWithLinks(container, text) {
   container.append(body);
 }
 
+function messageStatusControl(seq) {
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  summary.textContent = "Status da mensagem";
+  details.append(summary);
+  const path = `/api/comments?entity_type=message_status&entity_id=${encodeURIComponent(seq)}`;
+  const account = activeAccountID;
+  const labels = { pending: "Pendente", in_review: "Em análise", done: "Concluída" };
+  details.addEventListener("toggle", async () => {
+    if (!details.open || details.children.length > 1 || account !== activeAccountID) return;
+    const note = document.createElement("small");
+    note.textContent = "Carregando…";
+    details.append(note);
+    try {
+      const data = await call(path);
+      const select = document.createElement("select");
+      select.setAttribute("aria-label", "Status da mensagem");
+      const unset = new Option("Sem status", "");
+      unset.disabled = true;
+      select.append(unset, ...Object.entries(labels).map(([value, label]) => new Option(label, value)));
+      select.value = data.status || "";
+      note.textContent = "";
+      details.insertBefore(select, note);
+      select.addEventListener("change", async () => {
+        if (account !== activeAccountID) return;
+        const previous = data.status;
+        select.disabled = true;
+        try {
+          const saved = await call(path, { method: "POST", body: JSON.stringify({ status: select.value }) });
+          data.status = saved.status;
+          note.textContent = " Salvo";
+        } catch {
+          select.value = previous || "";
+          note.textContent = " Falha ao salvar";
+        } finally {
+          select.disabled = false;
+        }
+      });
+    } catch {
+      note.textContent = "Status indisponível";
+      details.addEventListener("toggle", () => { if (!details.open) note.remove(); }, { once: true });
+    }
+  });
+  return details;
+}
+
 async function renderMessageBubble(thread, item, isCurrent) {
   const bubble = document.createElement("div"); bubble.className = `message-bubble${item.from_me ? " mine" : ""}`;
   const text = item.text || item.media?.caption;
@@ -167,6 +213,7 @@ async function renderMessageBubble(thread, item, isCurrent) {
   if (!text && !item.media) { const body = document.createElement("span"); body.textContent = "Mensagem sem texto"; bubble.append(body); }
   const time = document.createElement("time"); time.textContent = new Date(item.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
   bubble.append(time);
+  if (Number.isSafeInteger(item.seq) && item.seq > 0) bubble.append(messageStatusControl(item.seq));
   if (!isCurrent || isCurrent()) thread.append(bubble);
 }
 
