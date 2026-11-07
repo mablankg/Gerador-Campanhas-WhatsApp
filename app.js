@@ -159,14 +159,15 @@ function appendTextWithLinks(container, text) {
   container.append(body);
 }
 
-async function renderMessageBubble(thread, item) {
+async function renderMessageBubble(thread, item, isCurrent) {
   const bubble = document.createElement("div"); bubble.className = `message-bubble${item.from_me ? " mine" : ""}`;
   const text = item.text || item.media?.caption;
   if (text) appendTextWithLinks(bubble, text);
   await appendMessageMedia(bubble, item.media);
   if (!text && !item.media) { const body = document.createElement("span"); body.textContent = "Mensagem sem texto"; bubble.append(body); }
   const time = document.createElement("time"); time.textContent = new Date(item.timestamp).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-  bubble.append(time); thread.append(bubble);
+  bubble.append(time);
+  if (!isCurrent || isCurrent()) thread.append(bubble);
 }
 
 async function status() {
@@ -382,19 +383,31 @@ function appendGroupRows() {
   }
 }
 
+let conversationRevision = 0;
+
 async function loadGroupMessages(group, silent = false) {
+  const revision = conversationRevision;
+  const account = activeAccountID;
+  const isCurrent = () => revision === conversationRevision && account === activeAccountID && String(activeGroup?.id) === String(group.id);
+  if (!isCurrent()) return;
   const thread = document.querySelector("#messageThread"); if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
-    const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`); const messages = deduplicateMessages(data.messages || []);
+    const data = await call(`/api/group-messages?id=${encodeURIComponent(group.id)}`); if (!isCurrent()) return;
+    const messages = deduplicateMessages(data.messages || []);
     if (shouldKeepRenderedConversation(`group:${group.id}`, messages, silent)) return;
     clearMediaObjectURLs(); thread.replaceChildren();
     if (!messages.length) { thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este grupo.</div>'; return; }
-    for (const item of messages) await renderMessageBubble(thread, item);
+    for (const item of messages) {
+      if (!isCurrent()) return;
+      await renderMessageBubble(thread, item, isCurrent);
+    }
+    if (!isCurrent()) return;
     thread.scrollTop=thread.scrollHeight;
-  } catch(error){ if (!silent) thread.innerHTML=`<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`; }
+  } catch(error){ if (!silent && isCurrent()) thread.innerHTML=`<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`; }
 }
 
 function openGroup(group) {
+  conversationRevision++;
   renderSelectedContactPhoto(null);
   unreadGroups.delete(group.id);
   activeGroup=group; activeContact=null; contactForm.classList.add("hidden"); contactEmpty.classList.add("hidden");
@@ -648,20 +661,29 @@ function collectExtraFields() {
 }
 
 async function loadContactMessages(contact, silent = false) {
+  const revision = conversationRevision;
+  const account = activeAccountID;
+  const isCurrent = () => revision === conversationRevision && account === activeAccountID && String(activeContact?.id) === String(contact.id);
+  if (!isCurrent()) return;
   const thread = document.querySelector("#messageThread");
 	if (!silent) thread.innerHTML = '<div class="empty-conversation">Carregando mensagens...</div>';
   try {
-    const data = await call(`/api/contact-messages?id=${encodeURIComponent(contact.id)}`); const messages = deduplicateMessages(data.messages || []);
+    const data = await call(`/api/contact-messages?id=${encodeURIComponent(contact.id)}`); if (!isCurrent()) return;
+    const messages = deduplicateMessages(data.messages || []);
     if (shouldKeepRenderedConversation(`contact:${contact.id}`, messages, silent)) return;
     clearMediaObjectURLs(); thread.replaceChildren();
     if (!messages.length) {
       thread.innerHTML = '<div class="empty-conversation">Nenhuma mensagem armazenada para este contato.</div>';
       return;
     }
-    for (const item of messages) await renderMessageBubble(thread, item);
+    for (const item of messages) {
+      if (!isCurrent()) return;
+      await renderMessageBubble(thread, item, isCurrent);
+    }
+    if (!isCurrent()) return;
     thread.scrollTop = thread.scrollHeight;
   } catch (error) {
-	if (!silent) thread.innerHTML = `<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`;
+	if (!silent && isCurrent()) thread.innerHTML = `<div class="empty-conversation">Não foi possível carregar as mensagens: ${error.message}</div>`;
   }
 }
 
@@ -723,6 +745,7 @@ function renderSelectedContactPhoto(contact) {
 }
 
 function openContact(contact = null) {
+  conversationRevision++;
   renderSelectedContactPhoto(contact);
   if (contact) unreadContacts.delete(String(contact.id));
   activeContact = contact;
