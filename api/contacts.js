@@ -32,7 +32,8 @@ module.exports = async function handler(req, res) {
     }
     const account = String(req.query?.account || "");
     const accountQuery = /^[a-z0-9][a-z0-9_-]{2,31}$/.test(account) ? `account=${encodeURIComponent(account)}` : "";
-    const queryString = [accountQuery, q ? `q=${encodeURIComponent(q)}` : ""].filter(Boolean).join("&");
+    const archivedQuery = String(req.query?.archived || "") === "true" ? "archived=true" : "";
+    const queryString = [accountQuery, q ? `q=${encodeURIComponent(q)}` : "", archivedQuery].filter(Boolean).join("&");
     const path = id ? `/v1/contacts/${id}${accountQuery ? `?${accountQuery}` : ""}` : `/v1/contacts${queryString ? `?${queryString}` : ""}`;
     const init = req.method === "GET" ? {} : { method: req.method, body: JSON.stringify(req.body || {}) };
     const result = await upstream(config, path, init);

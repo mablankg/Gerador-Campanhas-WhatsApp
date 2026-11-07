@@ -17,7 +17,10 @@ module.exports = async function handler(req, res) {
     }
     if (req.method === "GET") {
       const account = String(req.query?.account || "");
-      const path = /^[a-z0-9][a-z0-9_-]{2,31}$/.test(account) ? `/v1/groups?account=${encodeURIComponent(account)}` : "/v1/groups";
+      const params = new URLSearchParams();
+      if (/^[a-z0-9][a-z0-9_-]{2,31}$/.test(account)) params.set("account", account);
+      if (String(req.query?.archived || "") === "true") params.set("archived", "true");
+      const path = `/v1/groups${params.size ? `?${params}` : ""}`;
       const result = await upstream(config, path);
       return res.status(result.status).json(result.body);
     }

@@ -47,6 +47,8 @@ let messageEventCursor = "latest";
 document.body.classList.add("auth-locked");
 const unreadContacts = new Set();
 const unreadGroups = new Set();
+const selectedContacts = new Set();
+const selectedGroups = new Set();
 conversationPane.append(kanbanBoard, document.querySelector("#lawyerBoard"));
 const savedLeftPanelWidth = Number(localStorage.getItem("blank_left_panel_width"));
 const savedRightPanelWidth = Number(localStorage.getItem("blank_right_panel_width"));
@@ -390,7 +392,8 @@ async function poll(id, accountID = activeAccountID) {
 
 async function loadGroups() {
   try {
-    const data = await call(`/api/groups?account=${encodeURIComponent(activeAccountID)}`);
+    const archived = document.querySelector("#conversationKind")?.value === "archived";
+    const data = await call(`/api/groups?account=${encodeURIComponent(activeAccountID)}${archived ? "&archived=true" : ""}`);
     groupSelect.replaceChildren();
     allGroups = data.groups || [];
     if (!data.groups?.length) {
@@ -426,7 +429,7 @@ function appendGroupRows() {
     const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `Grupo · ${group.participant_count} participantes${group.is_announce ? " · somente administradores" : ""}`;
     const workflow=document.createElement("small"); workflow.className=`contact-workflow priority-${group.priority||"normal"}`; workflow.style.borderLeftColor=stage?.[2]||"#3f9cd0"; workflow.textContent=`${stage?.[1]||"Novo"} · ${priorityLabels[group.priority||"normal"]}`;
 		button.append(name, detail, workflow); if(group.lawyer_name)button.append(createLawyerTag(group)); button.addEventListener("click", () => openGroup(group));
-		const wrapper=document.createElement("div");wrapper.className="selectable-card";const check=document.createElement("input");check.type="checkbox";check.checked=true;check.title="Desmarcar para arquivar";check.addEventListener("change",()=>archiveGroup(group));wrapper.append(check,button);list.append(wrapper);
+		const wrapper=document.createElement("div");wrapper.className="selectable-card";const check=createCardSelection(group,"group");const archive=createArchiveAction(group,"group");wrapper.append(check,button,archive);list.append(wrapper);
   }
 }
 
@@ -627,8 +630,33 @@ const priorityOrder = { urgent: 0, high: 1, normal: 2, low: 3 };
 
 function createLawyerTag(entity) { const tag=document.createElement("span");tag.className="lawyer-tag";tag.style.setProperty("--lawyer-color",entity.lawyer_color||"#718078");tag.textContent=entity.lawyer_name;return tag; }
 
-async function archiveContactCard(contact) { try { await call(`/api/contacts?id=${encodeURIComponent(contact.id)}`,{method:"PATCH",body:JSON.stringify({archived:true})}); allContacts=allContacts.filter(item=>String(item.id)!==String(contact.id)); renderContacts(); renderKanban(); renderLawyerBoard(); } catch(error){showContactResult(`Não foi possível arquivar: ${error.message}`,true);} }
-async function archiveGroup(group) { try { await call(`/api/groups?id=${encodeURIComponent(group.id)}`,{method:"PATCH",body:JSON.stringify({attendance_stage:group.attendance_stage||"new",priority:group.priority||"normal",lawyer_id:group.lawyer_id||0,archived:true})}); allGroups=allGroups.filter(item=>item.id!==group.id); renderGroups(); renderKanban(); renderLawyerBoard(); } catch(error){showContactResult(`Não foi possível arquivar: ${error.message}`,true);} }
+function createCardSelection(entity, kind) {
+	const selection = kind === "group" ? selectedGroups : selectedContacts;
+	const id = String(entity.id);
+	const check = document.createElement("input"); check.type = "checkbox"; check.className = "card-selection-check"; check.checked = selection.has(id); check.title = "Selecionar este card"; check.setAttribute("aria-label", "Selecionar este card");
+	for (const eventName of ["click", "pointerdown", "dragstart"]) check.addEventListener(eventName, event => event.stopPropagation());
+	check.addEventListener("change", () => { if (check.checked) selection.add(id); else selection.delete(id); });
+	return check;
+}
+
+function createArchiveAction(entity, kind) {
+	const button = document.createElement("button"); button.type = "button"; button.className = "card-archive-action secondary"; button.textContent = entity.archived ? "Restaurar" : "Arquivar"; button.title = entity.archived ? "Restaurar esta conversa" : "Arquivar esta conversa";
+	for (const eventName of ["click", "pointerdown", "dragstart"]) button.addEventListener(eventName, event => event.stopPropagation());
+	button.addEventListener("click", () => entity.archived ? restoreEntity(entity, kind) : (kind === "group" ? archiveGroup(entity) : archiveContactCard(entity)));
+	return button;
+}
+
+async function restoreEntity(entity, kind) {
+	try {
+		if (kind === "group") await call(`/api/groups?id=${encodeURIComponent(entity.id)}`, { method: "PATCH", body: JSON.stringify({ attendance_stage: entity.attendance_stage || "new", priority: entity.priority || "normal", lawyer_id: entity.lawyer_id || 0, archived: false }) });
+		else await call(`/api/contacts?id=${encodeURIComponent(entity.id)}`, { method: "PATCH", body: JSON.stringify({ archived: false }) });
+		if (kind === "group") allGroups = allGroups.filter(item => item.id !== entity.id); else allContacts = allContacts.filter(item => String(item.id) !== String(entity.id));
+		renderContacts(); showContactResult(`${kind === "group" ? "Grupo" : "Contato"} restaurado com sucesso.`);
+	} catch (error) { showContactResult(`Não foi possível restaurar: ${error.message}`, true); }
+}
+
+async function archiveContactCard(contact) { if(!confirm(`Arquivar ${contactDisplayName(contact)}? A conversa sairá das listas ativas.`))return; try { await call(`/api/contacts?id=${encodeURIComponent(contact.id)}`,{method:"PATCH",body:JSON.stringify({archived:true})}); selectedContacts.delete(String(contact.id)); allContacts=allContacts.filter(item=>String(item.id)!==String(contact.id)); renderContacts(); renderKanban(); renderLawyerBoard(); showContactResult("Contato arquivado."); } catch(error){showContactResult(`Não foi possível arquivar: ${error.message}`,true);} }
+async function archiveGroup(group) { if(!confirm(`Arquivar o grupo ${group.name}? Ele sairá das listas ativas.`))return; try { await call(`/api/groups?id=${encodeURIComponent(group.id)}`,{method:"PATCH",body:JSON.stringify({attendance_stage:group.attendance_stage||"new",priority:group.priority||"normal",lawyer_id:group.lawyer_id||0,archived:true})}); selectedGroups.delete(String(group.id)); allGroups=allGroups.filter(item=>item.id!==group.id); renderGroups(); renderKanban(); renderLawyerBoard(); showContactResult("Grupo arquivado."); } catch(error){showContactResult(`Não foi possível arquivar: ${error.message}`,true);} }
 
 function renderKanban() {
   const container = document.querySelector("#kanbanColumns");
@@ -657,12 +685,12 @@ function renderKanban() {
       const unread = entity.entity_kind === "group" ? unreadGroups.has(entity.id) : unreadContacts.has(String(entity.id));
       const card = document.createElement("article"); card.className = `kanban-card priority-${entity.priority || "normal"}${unread ? " incoming" : ""}`; card.draggable = true; card.dataset.id = entityID; card.dataset.kind = entity.entity_kind;
       card.style.setProperty("--stage-color", color);
-			const archiveCheck=document.createElement("input");archiveCheck.type="checkbox";archiveCheck.checked=true;archiveCheck.className="card-archive-check";archiveCheck.title="Desmarcar para arquivar";archiveCheck.addEventListener("click",event=>event.stopPropagation());archiveCheck.addEventListener("change",()=>entity.entity_kind==="group"?archiveGroup(entity):archiveContactCard(entity));
+			const archiveCheck=createCardSelection(entity,entity.entity_kind);const archiveAction=createArchiveAction(entity,entity.entity_kind);
       const priority = document.createElement("span"); priority.className = "kanban-priority"; priority.textContent = `${entity.entity_kind === "group" ? "Grupo · " : ""}${priorityLabels[entity.priority || "normal"]}`;
       const name = document.createElement("strong"); name.textContent = entity.entity_kind === "group" ? entity.name : contactDisplayName(entity);
       const phone = document.createElement("small"); phone.textContent = entity.entity_kind === "group" ? `${entity.participant_count} participantes` : formatPhone(entity.phone);
       const meta = document.createElement("div"); meta.className = "kanban-meta"; meta.textContent = entity.entity_kind === "group" ? (entity.is_announce ? "Somente administradores" : "Todos podem enviar") : (entity.responsible || entity.contact_type || "Lead");
-			card.append(archiveCheck,priority, name, phone, meta); if(entity.lawyer_name)card.append(createLawyerTag(entity));
+			card.append(archiveCheck,archiveAction,priority, name, phone, meta); if(entity.lawyer_name)card.append(createLawyerTag(entity));
       card.addEventListener("dragstart", (event) => { event.dataTransfer.setData("application/x-blank-entity", JSON.stringify({ id: entityID, kind: entity.entity_kind })); card.classList.add("dragging"); });
       card.addEventListener("dragend", () => card.classList.remove("dragging"));
       card.addEventListener("click", () => { if (entity.entity_kind === "group") openGroup(allGroups.find((item) => item.id === entity.id) || entity); else openContact(allContacts.find((item) => String(item.id) === String(entity.id)) || entity); showConversationView(); });
@@ -703,8 +731,8 @@ function renderLawyerBoard(){
 		const heading=document.createElement("div");heading.className="lawyer-column-heading";heading.innerHTML=`<strong>${lawyer.name}</strong><span>${entities.length}</span>`;column.append(heading);
 		const cards=document.createElement("div");cards.className="lawyer-card-list";
 		for(const entity of entities){const card=document.createElement("article");card.className="lawyer-card";card.draggable=true;card.dataset.kind=entity.entity_kind;card.dataset.id=entity.entity_kind==="group"?entity.id:String(entity.id);
-			const check=document.createElement("input");check.type="checkbox";check.checked=true;check.title="Desmarcar para arquivar";check.addEventListener("change",()=>entity.entity_kind==="group"?archiveGroup(entity):archiveContactCard(entity));
-			const body=document.createElement("div");const name=document.createElement("strong");name.textContent=entity.entity_kind==="group"?entity.name:contactDisplayName(entity);const meta=document.createElement("small");meta.textContent=entity.entity_kind==="group"?`Grupo · ${entity.participant_count} participantes`:formatPhone(entity.phone);body.append(name,meta);card.append(check,body);
+			const check=createCardSelection(entity,entity.entity_kind);const archive=createArchiveAction(entity,entity.entity_kind);
+			const body=document.createElement("div");const name=document.createElement("strong");name.textContent=entity.entity_kind==="group"?entity.name:contactDisplayName(entity);const meta=document.createElement("small");meta.textContent=entity.entity_kind==="group"?`Grupo · ${entity.participant_count} participantes`:formatPhone(entity.phone);body.append(name,meta);card.append(check,body,archive);
 			card.addEventListener("dragstart",event=>event.dataTransfer.setData("application/x-blank-lawyer",JSON.stringify({kind:card.dataset.kind,id:card.dataset.id})));card.addEventListener("click",event=>{if(event.target===check)return;entity.entity_kind==="group"?openGroup(entity):openContact(entity);showConversationView();});cards.append(card);}
 		column.append(cards);column.addEventListener("dragover",event=>{event.preventDefault();column.classList.add("drag-over")});column.addEventListener("dragleave",()=>column.classList.remove("drag-over"));column.addEventListener("drop",async event=>{event.preventDefault();column.classList.remove("drag-over");let data;try{data=JSON.parse(event.dataTransfer.getData("application/x-blank-lawyer")||event.dataTransfer.getData("application/x-blank-entity"))}catch{return}const entity=data.kind==="group"?allGroups.find(x=>x.id===data.id):allContacts.find(x=>String(x.id)===String(data.id));if(!entity)return;const previous=entity.lawyer_id||0;entity.lawyer_id=Number(lawyer.id);entity.lawyer_name=lawyer.id?lawyer.name:"";entity.lawyer_color=lawyer.id?lawyer.color:"";renderLawyerBoard();try{const path=data.kind==="group"?`/api/groups?id=${encodeURIComponent(data.id)}`:`/api/contacts?id=${encodeURIComponent(data.id)}`;const payload=data.kind==="group"?{attendance_stage:entity.attendance_stage||"new",priority:entity.priority||"normal",lawyer_id:Number(lawyer.id),archived:false}:{lawyer_id:Number(lawyer.id)};Object.assign(entity,await call(path,{method:"PATCH",body:JSON.stringify(payload)}));renderContacts();renderGroups();}catch(error){entity.lawyer_id=previous;showContactResult(`Não foi possível vincular: ${error.message}`,true);renderLawyerBoard();}});container.append(column);
 	}
@@ -928,7 +956,7 @@ function renderContacts() {
 		const workflow = document.createElement("small"); workflow.className = `contact-workflow priority-${contact.priority || "normal"}`; workflow.style.borderLeftColor = stage?.[2] || "#9aa8a0"; workflow.textContent = `${stage?.[1] || "Sem etapa"} · ${priorityLabels[contact.priority || "normal"]}`; button.append(workflow);
 		const extraEntries = Object.entries(contact.extra || {}).slice(0, 2);
 		if (extraEntries.length) { const extra = document.createElement("small"); extra.className = "contact-extra-preview"; extra.textContent = extraEntries.map(([key, value]) => `${key}: ${value}`).join(" · "); button.append(extra); }
-		button.addEventListener("click", () => openContact(contact)); const wrapper=document.createElement("div");wrapper.className="selectable-card";const check=document.createElement("input");check.type="checkbox";check.checked=true;check.title="Desmarcar para arquivar";check.addEventListener("change",()=>archiveContactCard(contact));wrapper.append(check,button);contactList.append(wrapper);
+		button.addEventListener("click", () => openContact(contact)); const wrapper=document.createElement("div");wrapper.className="selectable-card";const check=createCardSelection(contact,"contact");const archive=createArchiveAction(contact,"contact");wrapper.append(check,button,archive);contactList.append(wrapper);
 	}
 	if (kind !== "contact") appendGroupRows();
 	const rows = Array.from(contactList.children);
@@ -942,6 +970,7 @@ async function loadContacts(query = "", silent = false) {
   try {
     const params = new URLSearchParams({ account: activeAccountID });
     if (query) params.set("q", query);
+    if (document.querySelector("#conversationKind")?.value === "archived") params.set("archived", "true");
     const data = await call(`/api/contacts?${params.toString()}`);
 		allContacts = data.contacts || [];
 		if (activeContact) activeContact = allContacts.find((item) => String(item.id) === String(activeContact.id)) || activeContact;
@@ -990,7 +1019,11 @@ document.querySelector("#saveGroupClassification").addEventListener("click", asy
 });
 
 
-document.querySelector("#conversationKind").addEventListener("change", renderContacts);
+document.querySelector("#conversationKind").addEventListener("change", async () => {
+	contactList.innerHTML = '<p class="muted">Carregando conversas...</p>';
+	await Promise.all([loadContacts(document.querySelector("#contactSearch").value.trim(), true), loadGroups()]);
+	renderContacts();
+});
 document.querySelector("#newGroupRail").addEventListener("click",()=>{groupsCard.classList.remove("hidden");groupsCard.scrollIntoView({behavior:"smooth"});});
 
 document.querySelector("#toggleContactRail").addEventListener("click", () => { document.querySelector("#contactRail").classList.add("collapsed"); contactsCard.classList.add("left-collapsed"); });

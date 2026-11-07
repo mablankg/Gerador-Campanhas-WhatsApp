@@ -236,9 +236,10 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .qr-panel { text-align: center; padding: 16px; border-radius: 14px; background: #f0f8f3; }
 .qr-panel h3, .qr-panel p { margin: 0 0 8px; }
 .qr-panel img { display: block; width: min(320px, 100%); margin: 10px auto; border-radius: 8px; }
-.selectable-card { position: relative; display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 5px; align-items: start; }
+.selectable-card { position: relative; display: grid; grid-template-columns: 20px minmax(0,1fr) auto; gap: 5px; align-items: start; }
 .selectable-card > input { margin: 13px 0 0 2px; accent-color: #147748; cursor: pointer; }
 .selectable-card > .contact-item { width: 100%; }
+.selectable-card > .card-archive-action { align-self: center; padding: 6px 7px; font-size: 9px; }
 .lawyer-tag { align-self: flex-start; display: inline-flex; width: max-content; max-width: 100%; padding: 3px 8px; border-radius: 999px; color: var(--lawyer-color); background: color-mix(in srgb, var(--lawyer-color) 16%, white); border: 1px solid color-mix(in srgb, var(--lawyer-color) 45%, white); font-size: 10px; font-weight: 800; }
 .lawyer-workspace { flex: 1 1 auto; min-height: 0; border: 1px solid #d9e5dd; border-radius: 18px; background: #edf6f1; overflow: hidden; display: flex; flex-direction: column; }
 .lawyer-workspace.hidden { display: none; }
@@ -247,11 +248,14 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 .lawyer-column-heading { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; }
 .lawyer-column-heading span { padding: 3px 7px; border-radius: 20px; background: #e5eee8; font-size: 11px; }
 .lawyer-card-list { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; display: flex; flex-direction: column; gap: 8px; padding-right: 3px; }
-.lawyer-card { display: grid; grid-template-columns: 20px 1fr; gap: 7px; align-items: start; padding: 11px; border-radius: 10px; border: 1px solid #dce6df; border-left: 4px solid var(--lawyer-color); background: #fff; box-shadow: 0 4px 10px #1d3c2d0d; cursor: grab; }
+.lawyer-card { display: grid; grid-template-columns: 20px minmax(0,1fr) auto; gap: 7px; align-items: start; padding: 11px; border-radius: 10px; border: 1px solid #dce6df; border-left: 4px solid var(--lawyer-color); background: #fff; box-shadow: 0 4px 10px #1d3c2d0d; cursor: grab; }
 .lawyer-card > div { display: grid; gap: 4px; min-width: 0; }
 .lawyer-card small { color: #68776f; }
-.card-archive-check { position: absolute; top: 9px; right: 9px; accent-color: #147748; z-index: 2; }
+.card-selection-check { accent-color: #147748; cursor: pointer; }
+.lawyer-card > .card-archive-action { padding: 5px 7px; font-size: 9px; }
 .kanban-card { position: relative; }
+.kanban-card > .card-selection-check { position: absolute; top: 10px; right: 9px; z-index: 2; }
+.kanban-card > .card-archive-action { position: absolute; right: 30px; bottom: 8px; z-index: 2; padding: 5px 7px; font-size: 9px; }
 .view-switch { justify-self: center; display: grid; grid-template-columns: repeat(3, auto); grid-auto-flow: column; width: max-content; min-width: max-content; padding: 3px; border-radius: 11px; background: #e5eee8; white-space: nowrap; }
 .view-switch button { min-width: 82px; padding: 8px 13px; border-radius: 8px; background: transparent; color: #53675c; font-size: 11px; white-space: nowrap; }
 .view-switch button.active { background: #fff; color: #086b3a; box-shadow: 0 2px 8px #173c2618; }
