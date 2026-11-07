@@ -871,18 +871,19 @@ document.querySelector("#newContact").addEventListener("click", () => openContac
 document.querySelector("#syncContacts").addEventListener("click", async () => {
   const button = document.querySelector("#syncContacts");
   button.disabled = true;
-  button.textContent = "Sincronizando...";
-  showContactResult("Importando contatos armazenados na sessão do WhatsApp...");
+  button.textContent = "Atualizando...";
+  showContactResult("Atualizando apenas os dados já associados à sessão selecionada...");
   try {
-    const queued = await call("/api/contacts-sync", { method: "POST", body: "{}" });
-    const completed = await poll(queued.id);
-    await loadContacts(document.querySelector("#contactSearch").value.trim());
-    showContactResult(`Contatos sincronizados: ${completed.contact_count ?? "concluído"}.`);
+    await Promise.all([
+      loadContacts(document.querySelector("#contactSearch").value.trim()),
+      loadGroups(document.querySelector("#groupSearch")?.value.trim() || "")
+    ]);
+    showContactResult("Lista atualizada. A agenda do aparelho não foi importada.");
   } catch (error) {
-    showContactResult(`Não foi possível sincronizar os contatos: ${error.message}`, true);
+    showContactResult(`Não foi possível atualizar a lista: ${error.message}`, true);
   } finally {
     button.disabled = false;
-    button.textContent = "Sincronizar WhatsApp";
+    button.textContent = "Atualizar";
   }
 });
 
