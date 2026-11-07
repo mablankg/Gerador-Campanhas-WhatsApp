@@ -359,20 +359,21 @@ async function loadGroups() {
   }
 }
 
-function renderGroups() {
-  const list = document.querySelector("#groupList");
-  const query = document.querySelector("#groupSearch").value.trim().toLocaleLowerCase("pt-BR");
+function renderGroups() { renderContacts(); }
+
+function appendGroupRows() {
+  const list = document.querySelector("#contactList");
+  const query = document.querySelector("#contactSearch").value.trim().toLocaleLowerCase("pt-BR");
   const groups = allGroups
     .filter((group) => !query || group.name.toLocaleLowerCase("pt-BR").includes(query))
     .sort((left, right) => left.name.localeCompare(right.name, "pt-BR", { sensitivity: "base", numeric: true }));
-  list.replaceChildren();
-  if (!groups.length) { list.innerHTML = '<p class="muted">Nenhum grupo encontrado.</p>'; return; }
+
   for (const group of groups) {
     const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${activeGroup?.id===group.id?" active":""}${unreadGroups.has(group.id)?" incoming":""}`; button.dataset.id = group.id;
     const stage = attendanceStages.find(([key]) => key === (group.attendance_stage || "new")); button.style.setProperty("--stage-color", stage?.[2] || "#3f9cd0");
     if (activeGroup?.id === group.id) button.setAttribute("aria-current", "true");
     const name = document.createElement("strong"); name.textContent = group.name;
-    const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `${group.participant_count} participantes${group.is_announce ? " · somente administradores" : ""}`;
+    const detail = document.createElement("small"); detail.className = "contact-summary"; detail.textContent = `Grupo · ${group.participant_count} participantes${group.is_announce ? " · somente administradores" : ""}`;
     const workflow=document.createElement("small"); workflow.className=`contact-workflow priority-${group.priority||"normal"}`; workflow.style.borderLeftColor=stage?.[2]||"#3f9cd0"; workflow.textContent=`${stage?.[1]||"Novo"} · ${priorityLabels[group.priority||"normal"]}`;
 		button.append(name, detail, workflow); if(group.lawyer_name)button.append(createLawyerTag(group)); button.addEventListener("click", () => openGroup(group));
 		const wrapper=document.createElement("div");wrapper.className="selectable-card";const check=document.createElement("input");check.type="checkbox";check.checked=true;check.title="Desmarcar para arquivar";check.addEventListener("change",()=>archiveGroup(group));wrapper.append(check,button);list.append(wrapper);
@@ -406,7 +407,7 @@ function openGroup(group) {
   document.querySelector("#to").value=group.id; message.disabled=false; messageAttachment.disabled=false; emojiButton.disabled=false; sendButton.disabled=false;
   document.querySelectorAll(".detail-tabs button").forEach((item,index)=>item.classList.toggle("active",index===0));
   document.querySelectorAll("[data-panel]").forEach((panel)=>panel.classList.toggle("hidden",panel.dataset.panel!=="group"));
-  document.querySelectorAll("#groupList .contact-item").forEach((item)=>{ const selected=item.dataset.id===group.id; item.classList.toggle("active",selected); item.toggleAttribute("aria-current",selected); if(selected)item.classList.remove("incoming"); });
+  document.querySelectorAll("#contactList .contact-item").forEach((item)=>{ const selected=item.dataset.id===group.id; item.classList.toggle("active",selected); item.toggleAttribute("aria-current",selected); if(selected)item.classList.remove("incoming"); });
   loadGroupMessages(group); loadComments();
 }
 
@@ -773,8 +774,8 @@ function renderContacts() {
 	  .filter((contact) => stageFilter === "all" || (stageFilter === "none" ? !contact.attendance_stage : contact.attendance_stage === stageFilter))
 	  .sort((left, right) => contactDisplayName(left).localeCompare(contactDisplayName(right), "pt-BR", { sensitivity: "base", numeric: true }));
 	contactList.replaceChildren();
-	if (!contacts.length) { contactList.innerHTML = '<p class="muted">Nenhum contato encontrado.</p>'; return; }
-	for (const contact of contacts) {
+	const kind = document.querySelector("#conversationKind").value;
+	for (const contact of kind === "group" ? [] : contacts) {
 		const button = document.createElement("button"); button.type = "button"; button.className = `contact-item${String(activeContact?.id||"")===String(contact.id)?" active":""}${unreadContacts.has(String(contact.id))?" incoming":""}`; button.dataset.id = contact.id;
 		const stage = attendanceStages.find(([key]) => key === (contact.attendance_stage || "new"));
 		button.style.setProperty("--stage-color", stage?.[2] || "#9aa8a0");
@@ -788,6 +789,12 @@ function renderContacts() {
 		if (extraEntries.length) { const extra = document.createElement("small"); extra.className = "contact-extra-preview"; extra.textContent = extraEntries.map(([key, value]) => `${key}: ${value}`).join(" · "); button.append(extra); }
 		button.addEventListener("click", () => openContact(contact)); const wrapper=document.createElement("div");wrapper.className="selectable-card";const check=document.createElement("input");check.type="checkbox";check.checked=true;check.title="Desmarcar para arquivar";check.addEventListener("change",()=>archiveContactCard(contact));wrapper.append(check,button);contactList.append(wrapper);
 	}
+	if (kind !== "contact") appendGroupRows();
+	const rows = Array.from(contactList.children);
+	rows.sort((a, b) => Number(b.querySelector(".incoming") !== null) - Number(a.querySelector(".incoming") !== null)
+	  || a.querySelector("strong").textContent.localeCompare(b.querySelector("strong").textContent, "pt-BR"));
+	if (rows.length) contactList.replaceChildren(...rows);
+	else contactList.innerHTML = '<p class="muted">Nenhuma conversa encontrada.</p>';
 }
 
 async function loadContacts(query = "", silent = false) {
@@ -840,20 +847,9 @@ document.querySelector("#saveGroupClassification").addEventListener("click", asy
 	const lawyer_id=Number(document.querySelector("#groupLawyer").value||0); try { const updated=await call(`/api/groups?id=${encodeURIComponent(activeGroup.id)}`,{method:"PATCH",body:JSON.stringify({attendance_stage:stage,priority,lawyer_id,archived:false})}); Object.assign(activeGroup,updated,allLawyers.find(item=>Number(item.id)===lawyer_id)?{lawyer_name:allLawyers.find(item=>Number(item.id)===lawyer_id).name,lawyer_color:allLawyers.find(item=>Number(item.id)===lawyer_id).color}:{lawyer_name:"",lawyer_color:""}); const stored=allGroups.find((item)=>item.id===activeGroup.id); if(stored)Object.assign(stored,activeGroup); renderGroups(); renderLawyerBoard(); showContactResult("Classificação do grupo salva."); }
   catch(error){showContactResult(`Não foi possível salvar: ${error.message}`,true);}
 });
-document.querySelector("#groupSearch").addEventListener("input", renderGroups);
 
-function switchCRMMode(mode){
-  const contacts=mode==="contacts"; document.querySelector("#contactsMode").classList.toggle("hidden",!contacts); document.querySelector("#groupsMode").classList.toggle("hidden",contacts);
-  document.querySelector("#contactsModeTab").classList.toggle("active",contacts); document.querySelector("#groupsModeTab").classList.toggle("active",!contacts);
-  document.querySelector(".rail-heading h2").textContent=contacts?"Contatos":"Grupos";
-  const entityValue = contacts ? "contact" : "group";
-  document.querySelector("#kanbanEntityFilter").value = entityValue;
-  document.querySelector("#lawyerEntityFilter").value = entityValue;
-  renderKanban(); renderLawyerBoard();
-}
-document.querySelector("#contactsModeTab").addEventListener("click",()=>switchCRMMode("contacts"));
-document.querySelector("#groupsModeTab").addEventListener("click",()=>switchCRMMode("groups"));
-document.querySelector("#syncGroupsRail").addEventListener("click",syncGroups);
+
+document.querySelector("#conversationKind").addEventListener("change", renderContacts);
 document.querySelector("#newGroupRail").addEventListener("click",()=>{groupsCard.classList.remove("hidden");groupsCard.scrollIntoView({behavior:"smooth"});});
 
 document.querySelector("#toggleContactRail").addEventListener("click", () => { document.querySelector("#contactRail").classList.add("collapsed"); contactsCard.classList.add("left-collapsed"); });
@@ -938,7 +934,7 @@ document.querySelector("#syncContacts").addEventListener("click", async () => {
   try {
     await Promise.all([
       loadContacts(document.querySelector("#contactSearch").value.trim()),
-      loadGroups(document.querySelector("#groupSearch")?.value.trim() || "")
+      loadGroups(document.querySelector("#contactSearch")?.value.trim() || "")
     ]);
     showContactResult("Lista atualizada. A agenda do aparelho não foi importada.");
   } catch (error) {
