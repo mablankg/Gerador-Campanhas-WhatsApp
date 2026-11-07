@@ -124,6 +124,9 @@
               <p class="muted">Compromissos, retornos e prazos do contato ou grupo.</p>
               <form id="taskForm">
                 <label>Nova tarefa<input id="taskTitle" maxlength="300" required placeholder="Ex.: Retornar ligação" /></label>
+                <label>Descrição<textarea id="taskDescription" rows="3" maxlength="8000" placeholder="Mensagem que será enviada pelo WhatsApp"></textarea></label>
+                <label>Link relacionado<input id="taskLink" type="url" maxlength="2000" placeholder="https://drive.google.com/..." /></label>
+                <label>Anexo<input id="taskAttachment" type="file" accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.zip" /></label>
                 <label>Data e hora<input id="taskDue" type="datetime-local" required /></label>
                 <button id="addTask" type="submit">Adicionar tarefa</button>
               </form>

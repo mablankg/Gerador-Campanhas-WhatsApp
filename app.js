@@ -544,7 +544,15 @@ function renderTasks(tasks = []) {
     const card = document.createElement("article"); card.className = `task-card${task.status === "done" ? " completed" : ""}`;
     const check = document.createElement("input"); check.type = "checkbox"; check.checked = task.status === "done"; check.title = check.checked ? "Reabrir tarefa" : "Concluir tarefa";
     const content = document.createElement("div"); const title = document.createElement("strong"); title.textContent = task.title;
-    const due = document.createElement("small"); due.textContent = new Date(task.due_at).toLocaleString("pt-BR"); content.append(title, due);
+    const due = document.createElement("small");
+    const deliveryLabels = { scheduled: "Agendada", queued: "Enviando", sent: "Enviada", failed: "Falha no envio" };
+    due.textContent = `${new Date(task.due_at).toLocaleString("pt-BR")} · ${deliveryLabels[task.delivery_status] || task.delivery_status}`;
+    content.append(title);
+    if (task.description) { const description = document.createElement("span"); description.textContent = task.description; content.append(description); }
+    if (task.link_url) { const link = document.createElement("a"); link.href = task.link_url; link.target = "_blank"; link.rel = "noopener"; link.textContent = "Abrir link"; content.append(link); }
+    if (task.attachment?.file_name) { const attachment = document.createElement("small"); attachment.textContent = `Anexo: ${task.attachment.file_name}`; content.append(attachment); }
+    content.append(due);
+    if (task.delivery_error) { const failure = document.createElement("small"); failure.className = "task-error"; failure.textContent = task.delivery_error; content.append(failure); }
     const remove = document.createElement("button"); remove.type = "button"; remove.className = "task-delete"; remove.textContent = "Excluir";
     check.addEventListener("change", async () => {
       try { await call(taskEndpoint({}, task.id), { method: "PATCH", body: JSON.stringify({ status: check.checked ? "done" : "pending" }) }); await loadTasks(); }
@@ -1169,7 +1177,14 @@ document.querySelector("#taskForm")?.addEventListener("submit", async event => {
   if (!title || !dueValue) return showTaskResult("Informe a tarefa e a data.", true);
   const original = button.textContent; button.disabled = true; button.textContent = "Adicionando...";
   try {
-    await call(taskEndpoint({ entity_type: entity.type, entity_id: entity.id }), { method: "POST", body: JSON.stringify({ title, due_at: new Date(dueValue).toISOString() }) });
+    const attachment = await readAttachment(document.querySelector("#taskAttachment").files[0]);
+    await call(taskEndpoint({ entity_type: entity.type, entity_id: entity.id }), { method: "POST", body: JSON.stringify({
+      title,
+      description: document.querySelector("#taskDescription").value.trim(),
+      link_url: document.querySelector("#taskLink").value.trim(),
+      attachment: attachment || {},
+      due_at: new Date(dueValue).toISOString(),
+    }) });
     event.currentTarget.reset(); await loadTasks(); showTaskResult("Tarefa adicionada com sucesso.");
   } catch (error) { showTaskResult(`Não foi possível adicionar: ${error.message}`, true); }
   finally { button.disabled = false; button.textContent = original; }
