@@ -322,4 +322,29 @@ body.resizing-panels { cursor: col-resize; user-select: none; }
 
 
 
-.contact-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;float:right;margin-left:8px;border:1px solid #cfe3d8}\n
+.contact-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;float:right;margin-left:8px;border:1px solid #cfe3d8}
+
+.conversation-header > div:has(> #conversationName) {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.conversation-header > div:has(> .selected-contact-photo) {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+}
+.conversation-header .selected-contact-photo {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+  margin: 0 !important;
+}
+#conversationName, #conversationPhone {
+  grid-column: -2;
+}
+#conversationName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
