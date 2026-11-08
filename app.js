@@ -1154,6 +1154,7 @@ document.querySelector("#linkProcess")?.addEventListener("click", async () => {
 });
 document.querySelector("#processForm")?.addEventListener("submit", async event => {
   event.preventDefault();
+  const form = event.currentTarget;
   if (!activeEntity()) return showProcessResult("Selecione um contato ou grupo.", true);
   const payload = {
     case_number: document.querySelector("#processCaseNumber").value.trim(),
@@ -1165,13 +1166,14 @@ document.querySelector("#processForm")?.addEventListener("submit", async event =
   };
   try {
     const created = await call(processEndpoint("processes"), { method: "POST", body: JSON.stringify(payload) });
-    await linkSelectedProcess(created.id); event.currentTarget.reset(); document.querySelector("#processStatus").value = "active";
+    await linkSelectedProcess(created.id); form.reset(); document.querySelector("#processStatus").value = "active";
     showProcessResult("Processo criado e vinculado com sucesso.");
   } catch (error) { showProcessResult(`Não foi possível criar o processo: ${error.message}`, true); }
 });
 
 document.querySelector("#taskForm")?.addEventListener("submit", async event => {
   event.preventDefault();
+  const form = event.currentTarget;
   const entity = activeEntity(); const button = document.querySelector("#addTask");
   const title = document.querySelector("#taskTitle").value.trim(); const dueValue = document.querySelector("#taskDue").value;
   if (!entity) return showTaskResult("Selecione um contato ou grupo.", true);
@@ -1186,7 +1188,7 @@ document.querySelector("#taskForm")?.addEventListener("submit", async event => {
       attachment: attachment || {},
       due_at: new Date(dueValue).toISOString(),
     }) });
-    event.currentTarget.reset(); await loadTasks(); showTaskResult("Tarefa adicionada com sucesso.");
+    form.reset(); await loadTasks(); showTaskResult("Tarefa adicionada com sucesso.");
   } catch (error) { showTaskResult(`Não foi possível adicionar: ${error.message}`, true); }
   finally { button.disabled = false; button.textContent = original; }
 });
@@ -1372,3 +1374,17 @@ document.querySelector("#addAccount").addEventListener("click", async () => {
 unlock();
 
 
+const themeToggle = document.createElement("button");
+themeToggle.className = "secondary theme-toggle";
+themeToggle.id = "themeToggle";
+themeToggle.type = "button";
+themeToggle.title = "Ativar modo escuro";
+themeToggle.textContent = "🌙";
+document.querySelector(".header-actions")?.prepend(themeToggle);
+if (localStorage.getItem("blank_theme") === "dark") document.body.classList.add("dark-mode");
+themeToggle.addEventListener("click", () => {
+  const dark = document.body.classList.toggle("dark-mode");
+  localStorage.setItem("blank_theme", dark ? "dark" : "light");
+  themeToggle.textContent = dark ? "☀️" : "🌙";
+  themeToggle.title = dark ? "Ativar modo claro" : "Ativar modo escuro";
+});
